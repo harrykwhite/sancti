@@ -1,6 +1,7 @@
 {
     "textures": [
         "textures/player.png",
+        "textures/enemy.png",
         "textures/ui.png"
     ]
 }

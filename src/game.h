@@ -8,11 +8,19 @@ constexpr int gk_enemySpawnInterval = 120;
 constexpr const float gk_camLookDistLimit = 192.0f;
 constexpr const float gk_camLookDistScalarDist = gk_camLookDistLimit * 6.0f;
 
+enum TexIndex {
+    PLAYER_TEX,
+    ENEMY_TEX,
+    CURSOR_TEX,
+
+    NUM_TEX_INDEXES
+};
+
 enum RenderLayer {
     WORLD_RENDER_LAYER,
     UI_RENDER_LAYER,
 
-    RENDER_LAYER_CNT
+    NUM_RENDER_LAYERS
 };
 
 struct Player {

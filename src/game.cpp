@@ -16,7 +16,7 @@ static void spawn_enemy(const zf3::Vec2D pos) {
 
 void init_game(const zf3::UserGameFuncData* const zf3Data) {
     zf3Data->renderer->bgColor = {0.59f, 0.79f, 0.93f, 1.0f};
-    zf3::load_render_layers(zf3Data->renderer, RENDER_LAYER_CNT, UI_RENDER_LAYER);
+    zf3::load_render_layers(zf3Data->renderer, NUM_RENDER_LAYERS, UI_RENDER_LAYER);
 
     i_game.player.pos.x = zf3Data->windowMeta->size.x / 2.0f;
     i_game.player.pos.y = zf3Data->windowMeta->size.y / 2.0f;
@@ -42,7 +42,7 @@ void run_game_tick(const zf3::UserGameFuncData* const zf3Data) {
         zf3Data->cam->pos = i_game.player.pos;
 
         const zf3::SpriteBatchWriteData writeData = {
-            .texIndex = 0,
+            .texIndex = PLAYER_TEX,
             .pos = i_game.player.pos,
             .srcRect = {0, 0, 24, 40},
             .origin = {0.5f, 0.5f},
@@ -61,8 +61,8 @@ void run_game_tick(const zf3::UserGameFuncData* const zf3Data) {
         --i_game.enemySpawnTime;
     } else {
         const zf3::Vec2D spawnPos = {
-            zf3::gen_rand_float(0.0f, static_cast<float>(zf3Data->windowMeta->size.x)),
-            zf3::gen_rand_float(0.0f, static_cast<float>(zf3Data->windowMeta->size.y))
+            zf3::gen_rand_float(0.0f, zf3Data->windowMeta->size.x / 2.0f),
+            zf3::gen_rand_float(0.0f, zf3Data->windowMeta->size.y / 2.0f)
         };
 
         spawn_enemy(spawnPos);
@@ -76,9 +76,9 @@ void run_game_tick(const zf3::UserGameFuncData* const zf3Data) {
         }
 
         const zf3::SpriteBatchWriteData writeData = {
-            .texIndex = 0,
+            .texIndex = ENEMY_TEX,
             .pos = i_game.enemies[i].pos,
-            .srcRect = {0, 0, 24, 40},
+            .srcRect = {0, 0, 24, 36},
             .origin = {0.5f, 0.5f},
             .rot = 0.0f,
             .scale = {1.0f, 1.0f},
@@ -111,7 +111,7 @@ void run_game_tick(const zf3::UserGameFuncData* const zf3Data) {
     {
         // Write the cursor.
         const zf3::SpriteBatchWriteData writeData = {
-            .texIndex = 1,
+            .texIndex = CURSOR_TEX,
             .pos = zf3Data->windowMeta->inputState.mousePos,
             .srcRect = {0, 0, 4, 4},
             .origin = {0.5f, 0.5f},
