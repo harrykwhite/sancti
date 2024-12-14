@@ -14,6 +14,20 @@ static void spawn_enemy(const zf3::Vec2D pos) {
     i_game.enemies[enemyIndex].pos = pos;
 }
 
+static void spawn_projectile(const zf3::Vec2D pos, const zf3::Vec2D vel) {
+    const int projectileIndex = zf3::get_first_inactive_bit_index(i_game.projectileActivity.bytes, gk_projectileLimit);
+
+    if (projectileIndex == -1) {
+        zf3::log_error("Failed to spawn projectile as all projectile slots are taken!");
+        return;
+    }
+
+    zf3::activate_bit(i_game.projectileActivity.bytes, projectileIndex);
+
+    i_game.projectiles[projectileIndex].pos = pos;
+    i_game.projectiles[projectileIndex].vel = vel;
+}
+
 void init_game(const zf3::UserGameFuncData* const zf3Data) {
     zf3Data->renderer->bgColor = {0.59f, 0.79f, 0.93f, 1.0f};
     zf3::load_render_layers(zf3Data->renderer, NUM_RENDER_LAYERS, UI_RENDER_LAYER);
@@ -25,6 +39,8 @@ void init_game(const zf3::UserGameFuncData* const zf3Data) {
 }
 
 void run_game_tick(const zf3::UserGameFuncData* const zf3Data) {
+    const zf3::Vec2D mouseCamPos = zf3::conv_screen_to_camera_pos(zf3Data->windowMeta->inputState.mousePos, zf3Data->cam, zf3Data->windowMeta);
+
     //
     // Player
     //
@@ -40,6 +56,12 @@ void run_game_tick(const zf3::UserGameFuncData* const zf3Data) {
         i_game.player.pos.y += moveAxis.y * moveSpd;
 
         zf3Data->cam->pos = i_game.player.pos;
+
+        if (zf3::is_mouse_button_pressed(zf3::MOUSE_BUTTON_LEFT, zf3Data->windowMeta)) {
+            const zf3::Vec2D dir = zf3::calc_normal(mouseCamPos - i_game.player.pos);
+            const float spd = 13.0f;
+            spawn_projectile(i_game.player.pos, dir * spd);
+        }
 
         const zf3::SpriteBatchWriteData writeData = {
             .texIndex = PLAYER_TEX,
@@ -89,11 +111,33 @@ void run_game_tick(const zf3::UserGameFuncData* const zf3Data) {
     }
 
     //
+    // Projectiles
+    //
+    for (int i = 0; i < gk_projectileLimit; ++i) {
+        if (!zf3::is_bit_active(i_game.projectileActivity.bytes, i)) {
+            continue;
+        }
+
+        i_game.projectiles[i].pos += i_game.projectiles[i].vel;
+
+        const zf3::SpriteBatchWriteData writeData = {
+            .texIndex = PROJECTILE_TEX,
+            .pos = i_game.projectiles[i].pos,
+            .srcRect = {0, 0, 6, 6},
+            .origin = {0.5f, 0.5f},
+            .rot = 0.0f,
+            .scale = {1.0f, 1.0f},
+            .alpha = 1.0f
+        };
+
+        zf3::write_to_sprite_batch(zf3Data->renderer, WORLD_RENDER_LAYER, &writeData, zf3Data->assets);
+    }
+
+    //
     // Camera
     //
     {
         // Determine the look offset.
-        const zf3::Vec2D mouseCamPos = zf3::conv_screen_to_camera_pos(zf3Data->windowMeta->inputState.mousePos, zf3Data->cam, zf3Data->windowMeta);
         const float playerToMouseCamPosDist = zf3::calc_dist(i_game.player.pos, mouseCamPos);
         const zf3::Vec2D playerToMouseCamPosDir = zf3::calc_normal(mouseCamPos - i_game.player.pos);
 

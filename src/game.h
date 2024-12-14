@@ -5,12 +5,15 @@
 constexpr int gk_enemyLimit = 64;
 constexpr int gk_enemySpawnInterval = 120;
 
+constexpr int gk_projectileLimit = 512;
+
 constexpr const float gk_camLookDistLimit = 192.0f;
 constexpr const float gk_camLookDistScalarDist = gk_camLookDistLimit * 6.0f;
 
 enum TexIndex {
     PLAYER_TEX,
     ENEMY_TEX,
+    PROJECTILE_TEX,
     CURSOR_TEX,
 
     NUM_TEX_INDEXES
@@ -31,12 +34,20 @@ struct Enemy {
     zf3::Vec2D pos;
 };
 
+struct Projectile {
+    zf3::Vec2D pos;
+    zf3::Vec2D vel;
+};
+
 struct Game {
     Player player;
 
     Enemy enemies[gk_enemyLimit];
     zf3::Bitset<gk_enemyLimit> enemyActivity;
     int enemySpawnTime;
+
+    Projectile projectiles[gk_projectileLimit];
+    zf3::Bitset<gk_projectileLimit> projectileActivity;
 };
 
 void init_game(const zf3::UserGameFuncData* const zf3Data);

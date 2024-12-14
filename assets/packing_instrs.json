@@ -2,6 +2,7 @@
     "textures": [
         "textures/player.png",
         "textures/enemy.png",
+        "textures/projectile.png",
         "textures/ui.png"
     ]
 }
