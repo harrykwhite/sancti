@@ -50,6 +50,6 @@ struct Game {
     zf3::Bitset<gk_projectileLimit> projectileActivity;
 };
 
-void init_game(const zf3::UserGameFuncData* const zf3Data);
-void run_game_tick(const zf3::UserGameFuncData* const zf3Data);
+void init_game();
+void run_game_tick();
 void clean_game();
