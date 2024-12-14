@@ -3,6 +3,7 @@
 Game i_game;
 
 void init_game(const zf3::UserGameFuncData* const zf3Data) {
+    zf3Data->renderer->bgColor = {0.59f, 0.79f, 0.93f, 1.0f};
     zf3::load_render_layers(zf3Data->renderer, RENDER_LAYER_CNT, UI_RENDER_LAYER);
 
     //i_game.player.pos.x = zf3Data->windowMeta->size.x / 2.0f;
