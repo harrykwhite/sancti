@@ -9,7 +9,8 @@ int main() {
         .initWindowWidth = 1280,
         .initWindowHeight = 720,
         .windowTitle = "Example ZF3 Game",
-        .windowResizable = true
+        .windowResizable = true,
+        .hideCursor = true
     };
 
     zf3::run_game(&gameInfo);

@@ -1,5 +1,6 @@
 {
     "textures": [
-        "textures/player.png"
+        "textures/player.png",
+        "textures/ui.png"
     ]
 }
