@@ -8,7 +8,7 @@ int main() {
         .cleanup = clean_game,
         .initWindowWidth = 1280,
         .initWindowHeight = 720,
-        .windowTitle = "Example ZF3 Game",
+        .windowTitle = "Sancti",
         .windowResizable = true,
         .hideCursor = true
     };

@@ -89,6 +89,23 @@ void run_game_tick(const zf3::UserGameFuncData* const zf3Data) {
     }
 
     //
+    // Camera
+    //
+    {
+        // Determine the look offset.
+        const zf3::Vec2D mouseCamPos = zf3::conv_screen_to_camera_pos(zf3Data->windowMeta->inputState.mousePos, zf3Data->cam, zf3Data->windowMeta);
+        const float playerToMouseCamPosDist = zf3::calc_dist(i_game.player.pos, mouseCamPos);
+        const zf3::Vec2D playerToMouseCamPosDir = zf3::calc_normal(mouseCamPos - i_game.player.pos);
+
+        const float lookDist = gk_camLookDistLimit * zf3::get_min(playerToMouseCamPosDist / gk_camLookDistScalarDist, 1.0f);
+        const zf3::Vec2D lookOffs = playerToMouseCamPosDir * lookDist;
+
+        // Determine and approach the target position.
+        const zf3::Vec2D targPos = i_game.player.pos + lookOffs;
+        zf3Data->cam->pos = zf3::calc_lerp(zf3Data->cam->pos, targPos, 0.25f);
+    }
+
+    //
     // UI
     //
     {

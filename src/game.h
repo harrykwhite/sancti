@@ -5,6 +5,9 @@
 constexpr int gk_enemyLimit = 64;
 constexpr int gk_enemySpawnInterval = 120;
 
+constexpr const float gk_camLookDistLimit = 192.0f;
+constexpr const float gk_camLookDistScalarDist = gk_camLookDistLimit * 6.0f;
+
 enum RenderLayer {
     WORLD_RENDER_LAYER,
     UI_RENDER_LAYER,
