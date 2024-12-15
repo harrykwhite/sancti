@@ -13,8 +13,13 @@ find_package(glfw3 CONFIG REQUIRED)
 add_executable(sancti
 	src/entry.cpp
 	src/game.cpp
+	src/title_screen.cpp
+	src/world.cpp
 
 	src/game.h
+	src/game_states.h
+	src/title_screen.h
+	src/world.h
 )
 
 target_include_directories(sancti PRIVATE
