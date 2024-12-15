@@ -2,6 +2,40 @@
 
 Game i_game;
 
+static zf3::RectFloat get_player_collider() {
+    const zf3::Vec2D playerSize = zf3::get_assets().texSizes[PLAYER_TEX];
+    const zf3::Vec2D playerTopLeft = i_game.player.pos - (playerSize / 2.0f);
+
+    return {
+        playerTopLeft.x,
+        playerTopLeft.y,
+        playerSize.x,
+        playerSize.y
+    };
+}
+
+static void hurt_player(const zf3::Vec2D force) {
+    if (i_game.player.invTime > 0) {
+        return;
+    }
+
+    i_game.player.vel += force;
+    i_game.player.invTime = gk_playerInvTimeMax;
+}
+
+
+static void spawn_companion(const zf3::Vec2D pos) {
+    const int companionIndex = zf3::get_first_inactive_bit_index(i_game.companionActivity.bytes, gk_companionLimit);
+
+    if (companionIndex == -1) {
+        zf3::log_error("Failed to spawn companion as all companion slots are taken!");
+        return;
+    }
+
+    zf3::activate_bit(i_game.enemyActivity.bytes, companionIndex);
+    i_game.companions[companionIndex].pos = pos;
+}
+
 static void spawn_enemy(const zf3::Vec2D pos) {
     const int enemyIndex = zf3::get_first_inactive_bit_index(i_game.enemyActivity.bytes, gk_enemyLimit);
 
@@ -12,6 +46,23 @@ static void spawn_enemy(const zf3::Vec2D pos) {
 
     zf3::activate_bit(i_game.enemyActivity.bytes, enemyIndex);
     i_game.enemies[enemyIndex].pos = pos;
+}
+
+static zf3::RectFloat get_enemy_collider(const int enemyIndex) {
+    assert(enemyIndex >= 0 && enemyIndex < gk_enemyLimit);
+    assert(zf3::is_bit_active(i_game.enemyActivity.bytes, enemyIndex));
+
+    const Enemy& enemy = i_game.enemies[enemyIndex];
+
+    const zf3::Vec2D enemySize = zf3::get_assets().texSizes[ENEMY_TEX];
+    const zf3::Vec2D enemyTopLeft = enemy.pos - (enemySize / 2.0f);
+
+    return {
+        enemyTopLeft.x,
+        enemyTopLeft.y,
+        enemySize.x,
+        enemySize.y
+    };
 }
 
 static void spawn_projectile(const zf3::Vec2D pos, const zf3::Vec2D vel) {
@@ -35,39 +86,60 @@ void init_game() {
 
     i_game.player.pos.x = zf3::get_window_size().x / 2.0f;
     i_game.player.pos.y = zf3::get_window_size().y / 2.0f;
+
+    for (int i = 0; i < 3; ++i) {
+        const float spawnOffsRange = 64.0f;
+        const zf3::Vec2D spawnPos = i_game.player.pos + zf3::Vec2D(
+            zf3::gen_rand_float(-spawnOffsRange, spawnOffsRange),
+            zf3::gen_rand_float(-spawnOffsRange, spawnOffsRange)
+        );
+
+        spawn_companion(spawnPos);
+    }
 }
 
 void run_game_tick() {
     const zf3::Vec2D mouseCamPos = zf3::screen_to_camera_pos(zf3::get_mouse_pos());
 
-    //
-    // Player
-    //
+    // Update player.
     {
-        const zf3::Vec2DInt moveAxis = {
-            zf3::is_key_down(zf3::KEY_D) - zf3::is_key_down(zf3::KEY_A),
-            zf3::is_key_down(zf3::KEY_S) - zf3::is_key_down(zf3::KEY_W)
+        // Process input and movement.
+        const zf3::Vec2D moveAxis = {
+            static_cast<float>(zf3::is_key_down(zf3::KEY_D)) - static_cast<float>(zf3::is_key_down(zf3::KEY_A)),
+            static_cast<float>(zf3::is_key_down(zf3::KEY_S)) - static_cast<float>(zf3::is_key_down(zf3::KEY_W))
         };
 
         const float moveSpd = 3.0f;
 
-        i_game.player.pos.x += moveAxis.x * moveSpd;
-        i_game.player.pos.y += moveAxis.y * moveSpd;
+        const zf3::Vec2D velTarg = moveAxis * moveSpd;
+        i_game.player.vel = zf3::calc_lerp(i_game.player.vel, velTarg, 0.25f);
+        i_game.player.pos += i_game.player.vel;
 
-        zf3::g_camera.pos = i_game.player.pos;
-
-        if (zf3::is_mouse_button_pressed(zf3::MOUSE_BUTTON_LEFT)) {
-            const zf3::Vec2D dir = zf3::calc_normal(mouseCamPos - i_game.player.pos);
-            const float spd = 13.0f;
-            spawn_projectile(i_game.player.pos, dir * spd);
+        // Handle invincibility.
+        if (i_game.player.invTime > 0) {
+            --i_game.player.invTime;
         }
-
-        zf3::write_to_sprite_batch(WORLD_RENDER_LAYER, PLAYER_TEX, i_game.player.pos, {0, 0, 24, 40});
     }
 
-    //
-    // Enemies
-    //
+    // Update companions.
+    for (int i = 0; i < gk_companionLimit; ++i) {
+        if (!zf3::is_bit_active(i_game.companionActivity.bytes, i)) {
+            continue;
+        }
+
+        Companion& companion = i_game.companions[i];
+
+        const float moveSpd = 3.0f;
+
+        const float playerDist = zf3::calc_dist(i_game.player.pos, companion.pos);
+        const float playerDistMax = 64.0f;
+
+        const zf3::Vec2D velTarg = playerDist > playerDistMax ? zf3::calc_normal(i_game.player.pos - companion.pos) * moveSpd : zf3::Vec2D {};
+        i_game.player.vel = zf3::calc_lerp(i_game.player.vel, velTarg, 0.25f);
+        i_game.player.pos += i_game.player.vel;
+    }
+
+    // Process enemy spawning.
     if (i_game.enemySpawnTime > 0) {
         --i_game.enemySpawnTime;
     } else {
@@ -81,25 +153,30 @@ void run_game_tick() {
         i_game.enemySpawnTime = gk_enemySpawnInterval;
     }
 
-    for (int i = 0; i < gk_enemyLimit; ++i) {
-        if (!zf3::is_bit_active(i_game.enemyActivity.bytes, i)) {
-            continue;
-        }
+    // Handle player-enemy collisions.
+    {
+        const zf3::RectFloat playerCollider = get_player_collider();
 
-        zf3::write_to_sprite_batch(WORLD_RENDER_LAYER, ENEMY_TEX, i_game.enemies[i].pos, {0, 0, 24, 36});
+        for (int i = 0; i < gk_enemyLimit; ++i) {
+            if (!zf3::is_bit_active(i_game.enemyActivity.bytes, i)) {
+                continue;
+            }
+
+            const zf3::RectFloat enemyCollider = get_enemy_collider(i);
+
+            if (zf3::do_rects_intersect(playerCollider, enemyCollider)) {
+                hurt_player(zf3::calc_normal(i_game.player.pos - i_game.enemies[i].pos) * 16.0f);
+            }
+        }
     }
 
-    //
-    // Projectiles
-    //
+    // Process projectile movement.
     for (int i = 0; i < gk_projectileLimit; ++i) {
         if (!zf3::is_bit_active(i_game.projectileActivity.bytes, i)) {
             continue;
         }
 
         i_game.projectiles[i].pos += i_game.projectiles[i].vel;
-
-        zf3::write_to_sprite_batch(WORLD_RENDER_LAYER, PROJECTILE_TEX, i_game.projectiles[i].pos, {0, 0, 6, 6});
     }
 
     //
@@ -118,9 +195,33 @@ void run_game_tick() {
         zf3::g_camera.pos = zf3::calc_lerp(zf3::g_camera.pos, targPos, 0.25f);
     }
 
-    //
-    // UI
-    //
+    // Write render data.
+    zf3::write_to_sprite_batch(WORLD_RENDER_LAYER, PLAYER_TEX, i_game.player.pos, {0, 0, 24, 40});
+
+    for (int i = 0; i < gk_companionLimit; ++i) {
+        if (!zf3::is_bit_active(i_game.companionActivity.bytes, i)) {
+            continue;
+        }
+
+        zf3::write_to_sprite_batch(WORLD_RENDER_LAYER, PLAYER_TEX, i_game.companions[i].pos, {0, 0, 24, 40});
+    }
+
+    for (int i = 0; i < gk_enemyLimit; ++i) {
+        if (!zf3::is_bit_active(i_game.enemyActivity.bytes, i)) {
+            continue;
+        }
+
+        zf3::write_to_sprite_batch(WORLD_RENDER_LAYER, ENEMY_TEX, i_game.enemies[i].pos, {0, 0, 24, 36});
+    }
+
+    for (int i = 0; i < gk_projectileLimit; ++i) {
+        if (!zf3::is_bit_active(i_game.projectileActivity.bytes, i)) {
+            continue;
+        }
+
+        zf3::write_to_sprite_batch(WORLD_RENDER_LAYER, PROJECTILE_TEX, i_game.projectiles[i].pos, {0, 0, 6, 6});
+    }
+
     zf3::write_to_sprite_batch(UI_RENDER_LAYER, CURSOR_TEX, zf3::get_mouse_pos(), {0, 0, 4, 4}, {0.5f, 0.5f}, 0.0f, {zf3::g_camera.scale, zf3::g_camera.scale});
 }
 
