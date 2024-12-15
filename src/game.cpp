@@ -2,6 +2,16 @@
 
 Game i_game;
 
+static void spawn_player(const zf3::Vec2D pos) {
+    assert(!i_game.playerActive);
+
+    i_game.playerActive = true;
+    i_game.player = {
+        .pos = pos,
+        .hp = gk_playerHPMax
+    };
+}
+
 static zf3::RectFloat get_player_collider() {
     const zf3::Vec2D playerSize = zf3::get_assets().texSizes[PLAYER_TEX];
     const zf3::Vec2D playerTopLeft = i_game.player.pos - (playerSize / 2.0f);
@@ -14,15 +24,18 @@ static zf3::RectFloat get_player_collider() {
     };
 }
 
-static void hurt_player(const zf3::Vec2D force) {
+static void hurt_player(const int dmg, const zf3::Vec2D force) {
     if (i_game.player.invTime > 0) {
         return;
     }
 
     i_game.player.vel += force;
     i_game.player.invTime = gk_playerInvTimeMax;
-}
 
+    if (i_game.player.hp <= 0) {
+        i_game.playerActive = false;
+    }
+}
 
 static void spawn_companion(const zf3::Vec2D pos) {
     const int companionIndex = zf3::get_first_inactive_bit_index(i_game.companionActivity.bytes, gk_companionLimit);
@@ -32,8 +45,11 @@ static void spawn_companion(const zf3::Vec2D pos) {
         return;
     }
 
-    zf3::activate_bit(i_game.enemyActivity.bytes, companionIndex);
-    i_game.companions[companionIndex].pos = pos;
+    zf3::activate_bit(i_game.companionActivity.bytes, companionIndex);
+
+    i_game.companions[companionIndex] = {
+        .pos = pos
+    };
 }
 
 static void spawn_enemy(const zf3::Vec2D pos) {
@@ -45,7 +61,10 @@ static void spawn_enemy(const zf3::Vec2D pos) {
     }
 
     zf3::activate_bit(i_game.enemyActivity.bytes, enemyIndex);
-    i_game.enemies[enemyIndex].pos = pos;
+
+    i_game.enemies[enemyIndex] = {
+        .pos = pos
+    };
 }
 
 static zf3::RectFloat get_enemy_collider(const int enemyIndex) {
@@ -84,8 +103,7 @@ void init_game() {
     zf3::g_camera.scale = 2.0f;
     zf3::load_render_layers(NUM_RENDER_LAYERS, UI_RENDER_LAYER);
 
-    i_game.player.pos.x = zf3::get_window_size().x / 2.0f;
-    i_game.player.pos.y = zf3::get_window_size().y / 2.0f;
+    spawn_player({zf3::get_window_size().x / 2.0f, zf3::get_window_size().y / 2.0f});
 
     for (int i = 0; i < 3; ++i) {
         const float spawnOffsRange = 64.0f;
@@ -102,7 +120,7 @@ void run_game_tick() {
     const zf3::Vec2D mouseCamPos = zf3::screen_to_camera_pos(zf3::get_mouse_pos());
 
     // Update player.
-    {
+    if (i_game.playerActive) {
         // Process input and movement.
         const zf3::Vec2D moveAxis = {
             static_cast<float>(zf3::is_key_down(zf3::KEY_D)) - static_cast<float>(zf3::is_key_down(zf3::KEY_A)),
@@ -132,11 +150,11 @@ void run_game_tick() {
         const float moveSpd = 3.0f;
 
         const float playerDist = zf3::calc_dist(i_game.player.pos, companion.pos);
-        const float playerDistMax = 64.0f;
+        const float playerDistMax = 96.0f;
 
         const zf3::Vec2D velTarg = playerDist > playerDistMax ? zf3::calc_normal(i_game.player.pos - companion.pos) * moveSpd : zf3::Vec2D {};
-        i_game.player.vel = zf3::calc_lerp(i_game.player.vel, velTarg, 0.25f);
-        i_game.player.pos += i_game.player.vel;
+        companion.vel = zf3::calc_lerp(companion.vel, velTarg, 0.25f);
+        companion.pos += companion.vel;
     }
 
     // Process enemy spawning.
@@ -154,7 +172,7 @@ void run_game_tick() {
     }
 
     // Handle player-enemy collisions.
-    {
+    if (i_game.playerActive) {
         const zf3::RectFloat playerCollider = get_player_collider();
 
         for (int i = 0; i < gk_enemyLimit; ++i) {
@@ -165,7 +183,7 @@ void run_game_tick() {
             const zf3::RectFloat enemyCollider = get_enemy_collider(i);
 
             if (zf3::do_rects_intersect(playerCollider, enemyCollider)) {
-                hurt_player(zf3::calc_normal(i_game.player.pos - i_game.enemies[i].pos) * 16.0f);
+                hurt_player(1, zf3::calc_normal(i_game.player.pos - i_game.enemies[i].pos) * 16.0f);
             }
         }
     }
@@ -196,7 +214,9 @@ void run_game_tick() {
     }
 
     // Write render data.
-    zf3::write_to_sprite_batch(WORLD_RENDER_LAYER, PLAYER_TEX, i_game.player.pos, {0, 0, 24, 40});
+    if (i_game.playerActive) {
+        zf3::write_to_sprite_batch(WORLD_RENDER_LAYER, PLAYER_TEX, i_game.player.pos, {0, 0, 24, 40});
+    }
 
     for (int i = 0; i < gk_companionLimit; ++i) {
         if (!zf3::is_bit_active(i_game.companionActivity.bytes, i)) {

@@ -3,6 +3,7 @@
 #include <zf3.h>
 
 constexpr int gk_playerInvTimeMax = 30;
+constexpr int gk_playerHPMax = 100;
 
 constexpr int gk_companionLimit = 8;
 
@@ -34,6 +35,7 @@ struct Player {
     zf3::Vec2D pos;
     zf3::Vec2D vel;
     int invTime;
+    int hp;
 };
 
 struct Companion {
@@ -50,12 +52,6 @@ struct Enemy {
 struct Projectile {
     zf3::Vec2D pos;
     zf3::Vec2D vel;
-};
-
-template<typename T, int CNT>
-struct ActivityBuf {
-    T buf[CNT];
-    zf3::Bitset<CNT> activity;
 };
 
 struct Game {
