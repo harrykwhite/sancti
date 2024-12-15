@@ -24,24 +24,28 @@ static void load_state(const GameState state) {
     }
 }
 
-void init_game() {
+bool init_game() {
     if (!zf3::init_mem_arena(&i_game.memArena, zf3::megabytes_to_bytes(4))) {
-        // TODO: Handle!
+        return false;
     }
 
     load_state(TITLE_SCREEN_GAME_STATE);
+
+    return true;
 }
 
-void game_tick() {
+bool game_tick() {
+    bool success = false;
+
     GameState nextState = INVALID_GAME_STATE;
 
     switch (i_game.state) {
         case TITLE_SCREEN_GAME_STATE:
-            title_screen_tick(*i_game.titleScreen, nextState);
+            success = title_screen_tick(*i_game.titleScreen, nextState);
             break;
 
         case WORLD_GAME_STATE:
-            world_tick(*i_game.world, nextState);
+            success = world_tick(*i_game.world, nextState);
             break;
 
         default:
@@ -49,9 +53,13 @@ void game_tick() {
             break;
     }
 
-    if (nextState != INVALID_GAME_STATE) {
-        load_state(nextState);
+    if (success) {
+        if (nextState != INVALID_GAME_STATE) {
+            load_state(nextState);
+        }
     }
+
+    return success;
 }
 
 void clean_game() {

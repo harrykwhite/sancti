@@ -25,6 +25,6 @@ struct Game {
     };
 };
 
-void init_game();
-void game_tick();
+bool init_game();
+bool game_tick();
 void clean_game();

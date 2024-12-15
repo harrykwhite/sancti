@@ -8,4 +8,4 @@ struct TitleScreen {
 };
 
 void init_title_screen(TitleScreen& ts);
-void title_screen_tick(TitleScreen& ts, GameState& nextGameState);
+bool title_screen_tick(TitleScreen& ts, GameState& nextGameState);

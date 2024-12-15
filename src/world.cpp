@@ -116,7 +116,7 @@ void init_world(World& world) {
     }
 }
 
-void world_tick(World& world, GameState& nextGameState) {
+bool world_tick(World& world, GameState& nextGameState) {
     const zf3::Vec2D mouseCamPos = zf3::screen_to_camera_pos(zf3::get_mouse_pos());
 
     // Update player.
@@ -243,4 +243,6 @@ void world_tick(World& world, GameState& nextGameState) {
     }
 
     zf3::write_to_sprite_batch(UI_RENDER_LAYER, CURSOR_TEX, zf3::get_mouse_pos(), {0, 0, 4, 4}, {0.5f, 0.5f}, 0.0f, {zf3::g_camera.scale, zf3::g_camera.scale});
+
+    return true;
 }

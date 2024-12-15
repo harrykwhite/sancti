@@ -59,4 +59,4 @@ struct World {
 };
 
 void init_world(World& world);
-void world_tick(World& world, GameState& nextGameState);
+bool world_tick(World& world, GameState& nextGameState);
