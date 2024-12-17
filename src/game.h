@@ -7,8 +7,10 @@
 
 enum TexIndex {
     PLAYER_TEX,
+    SWORD_TEX,
     ENEMY_TEX,
     PROJECTILE_TEX,
+    HITBOX_TEX,
     CURSOR_TEX
 };
 
@@ -26,5 +28,5 @@ struct Game {
     GameStateData stateData;
 };
 
-bool init_game(const zf3::UserGameFuncData* const zf3Data);
-bool game_tick(const zf3::UserGameFuncData* const zf3Data);
+bool init_game(const zf3::UserGameFuncData& zf3Data);
+bool game_tick(const zf3::UserGameFuncData& zf3Data);

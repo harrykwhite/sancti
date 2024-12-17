@@ -1,8 +1,10 @@
 {
     "textures": [
         "textures/player.png",
+        "textures/sword.png",
         "textures/enemy.png",
         "textures/projectile.png",
+        "textures/hitbox.png",
         "textures/ui.png"
     ],
 	"fonts": [

@@ -13,5 +13,5 @@ struct TitleScreen {
     zf3::CharBatchID startTextCBID;
 };
 
-void init_title_screen(TitleScreen* const ts, const zf3::UserGameFuncData* const zf3Data);
-bool title_screen_tick(TitleScreen* const ts, const zf3::UserGameFuncData* const zf3Data, GameState* const nextGameState);
+void init_title_screen(TitleScreen& ts, const zf3::UserGameFuncData& zf3Data);
+bool title_screen_tick(TitleScreen& ts, GameState& nextGameState, const zf3::UserGameFuncData& zf3Data);

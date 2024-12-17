@@ -12,5 +12,5 @@ int main() {
         .hideCursor = true
     };
 
-    zf3::run_game(gameInfo);
+    zf3::start_game(gameInfo);
 }
