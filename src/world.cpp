@@ -2,6 +2,16 @@
 
 #include "game.h"
 
+static void spawn_player(World& world, const zf3::Vec2D pos) {
+    assert(!world.player.active);
+
+    world.player = {
+        .active = true,
+        .pos = pos,
+        .hp = 10 // TEMP
+    };
+}
+
 static int spawn_enemy(World& world, const zf3::Vec2D pos) {
     const int enemyIndex = zf3::get_first_inactive_bit_index(world.enemies.activity);
 
@@ -43,6 +53,8 @@ static int spawn_hitbox(HitboxActivityBuf& hitboxes, const zf3::Vec2D pos, const
 }
 
 static zf3::RectFloat get_player_collider(const Player& player) {
+    assert(player.active);
+
     const zf3::Vec2D size = zf3::get_assets().textures.sizes[PLAYER_TEX];
     const zf3::Vec2D topLeft = player.pos - (size / 2.0f);
 
@@ -55,6 +67,8 @@ static zf3::RectFloat get_player_collider(const Player& player) {
 }
 
 static void player_tick(Player& player, HitboxActivityBuf& hitboxes, const zf3::InputManager& inputManager, const zf3::Camera& cam, const zf3::Window& window) {
+    assert(player.active);
+
     //
     // Movement
     //
@@ -93,9 +107,18 @@ static void player_tick(Player& player, HitboxActivityBuf& hitboxes, const zf3::
     const float swordRotOffsTargAbs = gk_playerSwordRotOffsMax + ((static_cast<float>(player.swordChargeTime) / gk_playerSwordChargeTimeMax) * gk_playerSwordChargeRotOffs);
     const float swordRotOffsTarg = ((player.swordRotAxis ? 1 : -1) * swordRotOffsTargAbs);
     player.swordRotOffs = zf3::lerp(player.swordRotOffs, swordRotOffsTarg, 0.4f);
+
+    //
+    // Invincibility
+    //
+    if (player.invTime > 0) {
+        --player.invTime; // NOTE: Setting this to 1 actually gives you no invincibility time, and 2 gives you 1 tick. A bit misleading?
+    }
 }
 
-static void hurt_player(Player& player, const zf3::Vec2D force, zf3::SoundSrcManager& sndSrcManager) {
+static void hurt_player(Player& player, const int dmg, const zf3::Vec2D force, zf3::SoundSrcManager& sndSrcManager) {
+    assert(player.active);
+
     if (player.invTime > 0) {
         return;
     }
@@ -104,6 +127,12 @@ static void hurt_player(Player& player, const zf3::Vec2D force, zf3::SoundSrcMan
 
     player.vel += force;
     player.invTime = gk_playerInvTime;
+
+    player.hp -= dmg;
+
+    if (player.hp <= 0) {
+        player.active = false;
+    }
 }
 
 static zf3::RectFloat get_enemy_collider(const Enemy& enemy) {
@@ -135,7 +164,9 @@ static void hurt_enemy(EnemyActivityBuf& enemies, const int enemyIndex, const in
     }
 }
 
-static void proc_player_and_enemy_collisions(Player& player, EnemyActivityBuf& enemies, zf3::SoundSrcManager& sndSrcManager) {
+static void proc_player_enemy_collisions(Player& player, EnemyActivityBuf& enemies, zf3::SoundSrcManager& sndSrcManager) {
+    assert(player.active);
+
     const zf3::RectFloat playerCollider = get_player_collider(player);
 
     for (int i = 0; i < gk_enemyLimit; ++i) {
@@ -146,13 +177,13 @@ static void proc_player_and_enemy_collisions(Player& player, EnemyActivityBuf& e
         const zf3::RectFloat enemyCollider = get_enemy_collider(enemies[i]);
 
         if (zf3::do_rects_intersect(playerCollider, enemyCollider)) {
-            hurt_player(player, zf3::calc_normal(player.pos - enemies[i].pos) * 12.0f, sndSrcManager);
+            hurt_player(player, 1, zf3::calc_normal(player.pos - enemies[i].pos) * 12.0f, sndSrcManager);
         }
     }
 }
 
 static void proc_hitbox_collisions(HitboxActivityBuf& hitboxes, Player& player, EnemyActivityBuf& enemies, zf3::SoundSrcManager& sndSrcManager) {
-    const zf3::RectFloat playerCollider = get_player_collider(player);
+    const zf3::RectFloat playerCollider = player.active ? get_player_collider(player) : zf3::RectFloat {};
 
     for (int i = 0; i < gk_hitboxLimit; ++i) {
         if (!zf3::is_bit_active(hitboxes.activity, i)) {
@@ -162,11 +193,13 @@ static void proc_hitbox_collisions(HitboxActivityBuf& hitboxes, Player& player, 
         const Hitbox& hitbox = hitboxes[i];
 
         if (hitbox.props & HITBOX_PROPS_DMG_PLAYER) {
-            if (zf3::do_rects_intersect(playerCollider, hitbox.rect)) {
-                hurt_player(player, hitbox.force, sndSrcManager);
+            if (player.active) {
+                if (zf3::do_rects_intersect(playerCollider, hitbox.rect)) {
+                    hurt_player(player, hitbox.dmg, hitbox.force, sndSrcManager);
+                }
             }
         }
-        
+
         if (hitbox.props & HITBOX_PROPS_DMG_ENEMY) {
             for (int j = 0; j < gk_enemyLimit; ++j) {
                 if (!zf3::is_bit_active(enemies.activity, j)) {
@@ -188,33 +221,35 @@ static void camera_tick(zf3::Camera& cam, const Player& player, const zf3::Input
     static constexpr float lk_lookDistScalarDist = lk_lookDistLimit * 32.0f;
 
     // Determine the look offset.
-    const zf3::Vec2D mouseCamPos = zf3::screen_to_camera_pos(inputManager.inputState.mousePos, cam, window);
-    const float playerToMouseCamPosDist = zf3::calc_dist(player.pos, mouseCamPos);
-    const zf3::Vec2D playerToMouseCamPosDir = zf3::calc_normal(mouseCamPos - player.pos);
+    zf3::Vec2D lookOffs = {};
 
-    const float lookDist = lk_lookDistLimit * zf3::min(playerToMouseCamPosDist / lk_lookDistScalarDist, 1.0f);
-    const zf3::Vec2D lookOffs = playerToMouseCamPosDir * lookDist;
+    if (player.active) {
+        const zf3::Vec2D mouseCamPos = zf3::screen_to_camera_pos(inputManager.inputState.mousePos, cam, window);
+        const float playerToMouseCamPosDist = zf3::calc_dist(player.pos, mouseCamPos);
+        const zf3::Vec2D playerToMouseCamPosDir = zf3::calc_normal(mouseCamPos - player.pos);
+
+        const float lookDist = lk_lookDistLimit * zf3::min(playerToMouseCamPosDist / lk_lookDistScalarDist, 1.0f);
+        lookOffs = playerToMouseCamPosDir * lookDist;
+    }
 
     // Determine and approach the target position.
-    const zf3::Vec2D targPos = player.pos + lookOffs;
+    zf3::Vec2D targPos = player.pos + lookOffs; // NOTE: We use the player position even if they're inactive.
     cam.pos = zf3::lerp(cam.pos, targPos, 0.25f);
 }
 
 void init_world(World& world, const zf3::UserGameFuncData& zf3Data) {
     zf3::reset_renderer(zf3Data.renderer, NUM_WORLD_RENDER_LAYERS, UI_WORLD_RENDER_LAYER, {0.59f, 0.79f, 0.93f});
 
-    world.player.pos = zf3Data.window.size / 4.0f;
-    zf3Data.renderer.cam.pos = world.player.pos;
-
     const auto musicSrcID = zf3::add_music_src(zf3Data.musicSrcManager, 0);
     zf3::play_music_src(zf3Data.musicSrcManager, musicSrcID, 0.35f);
+
+    spawn_player(world, zf3Data.window.size / 4.0f);
+    zf3Data.renderer.cam.pos = world.player.pos;
 }
 
 bool world_tick(World& world, GameState& nextGameState, const zf3::UserGameFuncData& zf3Data) {
-    player_tick(world.player, world.hitboxes, zf3Data.inputManager, zf3Data.renderer.cam, zf3Data.window);
-
-    if (world.player.invTime > 0) {
-        --world.player.invTime; // NOTE: Setting this to 1 actually gives you no invincibility time, and 2 gives you 1 tick. A bit misleading?
+    if (world.player.active) {
+        player_tick(world.player, world.hitboxes, zf3Data.inputManager, zf3Data.renderer.cam, zf3Data.window);
     }
 
     if (world.enemySpawnTime > 0) {
@@ -238,7 +273,10 @@ bool world_tick(World& world, GameState& nextGameState, const zf3::UserGameFuncD
         enemy_tick(world.enemies[i]);
     }
 
-    proc_player_and_enemy_collisions(world.player, world.enemies, zf3Data.sndSrcManager);
+    if (world.player.active) {
+        proc_player_enemy_collisions(world.player, world.enemies, zf3Data.sndSrcManager);
+    }
+
     proc_hitbox_collisions(world.hitboxes, world.player, world.enemies, zf3Data.sndSrcManager);
 
     camera_tick(zf3Data.renderer.cam, world.player, zf3Data.inputManager, zf3Data.window);
@@ -248,7 +286,7 @@ bool world_tick(World& world, GameState& nextGameState, const zf3::UserGameFuncD
     //
 
     // Player
-    {
+    if (world.player.active) {
         float alpha = 1.0f;
 
         if (world.player.invTime > 0) {

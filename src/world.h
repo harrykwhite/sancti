@@ -21,6 +21,8 @@ enum WorldRenderLayer {
 };
 
 struct Player {
+    bool active;
+
     zf3::Vec2D pos;
     zf3::Vec2D vel;
     int invTime;
@@ -58,7 +60,6 @@ using HitboxActivityBuf = zf3::ActivityBuf<Hitbox, gk_hitboxLimit>;
 
 struct World {
     Player player;
-    bool playerActive; // NOTE: Don't clear player data until "restarting" him. Likewise for everything else.
 
     EnemyActivityBuf enemies;
     int enemySpawnTime;
