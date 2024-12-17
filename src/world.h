@@ -34,6 +34,7 @@ struct Player {
 struct Enemy {
     zf3::Vec2D pos;
     zf3::Vec2D vel;
+    int hp;
 };
 
 using EnemyActivityBuf = zf3::ActivityBuf<Enemy, gk_enemyLimit>;

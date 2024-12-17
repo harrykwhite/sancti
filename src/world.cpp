@@ -9,7 +9,8 @@ static int spawn_enemy(World& world, const zf3::Vec2D pos) {
         zf3::activate_bit(world.enemies.activity, enemyIndex);
 
         world.enemies[enemyIndex] = {
-            .pos = pos
+            .pos = pos,
+            .hp = 3 // TEMP
         };
     } else {
         zf3::log_error("Failed to spawn enemy as all enemy slots are taken!");
@@ -122,8 +123,16 @@ static void enemy_tick(Enemy& enemy) {
     enemy.vel = zf3::lerp(enemy.vel, {}, 0.25f);
 }
 
-static void hurt_enemy(Enemy& enemy, const zf3::Vec2D force, zf3::SoundSrcManager& sndSrcManager) {
+static void hurt_enemy(EnemyActivityBuf& enemies, const int enemyIndex, const int dmg, const zf3::Vec2D force, zf3::SoundSrcManager& sndSrcManager) {
+    Enemy& enemy = enemies[enemyIndex];
+
     enemy.vel += force;
+
+    enemy.hp -= dmg;
+
+    if (enemy.hp <= 0) {
+        zf3::deactivate_bit(enemies.activity, enemyIndex);
+    }
 }
 
 static void proc_player_and_enemy_collisions(Player& player, EnemyActivityBuf& enemies, zf3::SoundSrcManager& sndSrcManager) {
@@ -167,7 +176,7 @@ static void proc_hitbox_collisions(HitboxActivityBuf& hitboxes, Player& player, 
                 const zf3::RectFloat enemyCollider = get_enemy_collider(enemies[j]);
 
                 if (zf3::do_rects_intersect(hitbox.rect, enemyCollider)) {
-                    hurt_enemy(enemies[j], hitbox.force, sndSrcManager);
+                    hurt_enemy(enemies, j, hitbox.dmg, hitbox.force, sndSrcManager);
                 }
             }
         }
