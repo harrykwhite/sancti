@@ -22,7 +22,7 @@ bool title_screen_tick(TitleScreen* const ts, const zf3::UserGameFuncData* const
     if (zf3::is_key_pressed(zf3::KEY_ENTER, zf3Data->inputManager)) {
         *nextGameState = WORLD_GAME_STATE;
     }
-    
+
     zf3::get_char_batch_display_props(zf3Data->renderer, ts->titleTextCBID)->pos = calc_title_text_pos(zf3Data->window);
     zf3::get_char_batch_display_props(zf3Data->renderer, ts->startTextCBID)->pos = calc_start_text_pos(zf3Data->window);
 

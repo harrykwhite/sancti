@@ -18,5 +18,11 @@
 			"relFilePath": "fonts/eb_garamond.ttf",
 			"ptSize": 72
 		}
-	]
+	],
+	"sounds": [
+        "sounds/player_hurt.wav"
+    ],
+	"music": [
+        "music/wilderness.mp3"
+    ]
 }

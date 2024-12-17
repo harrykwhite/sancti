@@ -44,11 +44,13 @@ static void proc_player_movement(Player* const player, const zf3::InputManager* 
     player->pos += player->vel;
 }
 
-static void hurt_player(Player* const player, const zf3::Vec2D force) {
+static void hurt_player(Player* const player, zf3::SoundSrcManager* const sndSrcManager, const zf3::Sounds& snds, const zf3::Vec2D force) {
     if (player->invTime > 0) {
         return;
     }
-    
+
+    zf3::add_and_play_sound_src(sndSrcManager, PLAYER_HURT_SND, snds);
+
     player->vel += force;
     player->invTime = gk_playerInvTime;
 }
@@ -65,18 +67,18 @@ static zf3::RectFloat get_enemy_collider(const Enemy& enemy, const zf3::Textures
     };
 }
 
-static void proc_player_and_enemy_collisions(Player* const player, EnemyActivityBuf* const enemies, const zf3::Textures& textures) {
-    const zf3::RectFloat playerCollider = get_player_collider(*player, textures);
+static void proc_player_and_enemy_collisions(Player* const player, EnemyActivityBuf* const enemies, zf3::SoundSrcManager* const sndSrcManager, const zf3::Assets& assets) {
+    const zf3::RectFloat playerCollider = get_player_collider(*player, assets.textures);
 
     for (int i = 0; i < gk_enemyLimit; ++i) {
         if (!zf3::is_bit_active(enemies->activity, i)) {
             continue;
         }
 
-        const zf3::RectFloat enemyCollider = get_enemy_collider((*enemies)[i], textures);
+        const zf3::RectFloat enemyCollider = get_enemy_collider((*enemies)[i], assets.textures);
 
         if (zf3::do_rects_intersect(playerCollider, enemyCollider)) {
-            hurt_player(player, zf3::calc_normal(player->pos - (*enemies)[i].pos) * 12.0f);
+            hurt_player(player, sndSrcManager, assets.sounds, zf3::calc_normal(player->pos - (*enemies)[i].pos) * 12.0f);
         }
     }
 }
@@ -103,6 +105,9 @@ void init_world(World* const world, const zf3::UserGameFuncData* const zf3Data) 
 
     world->player.pos = zf3Data->window->size / 4.0f;
     zf3Data->renderer->cam.pos = world->player.pos;
+
+    const auto musicSrcID = zf3::add_music_src(zf3Data->musicSrcManager, 0, zf3Data->assets->music);
+    zf3::play_music_src(zf3Data->musicSrcManager, musicSrcID, zf3Data->assets->music);
 }
 
 bool world_tick(World* const world, const zf3::UserGameFuncData* const zf3Data, GameState* const nextGameState) {
@@ -125,7 +130,7 @@ bool world_tick(World* const world, const zf3::UserGameFuncData* const zf3Data, 
         world->enemySpawnTime = gk_enemySpawnInterval;
     }
 
-    proc_player_and_enemy_collisions(&world->player, &world->enemies, zf3Data->assets->textures);
+    proc_player_and_enemy_collisions(&world->player, &world->enemies, zf3Data->sndSrcManager, *zf3Data->assets);
 
     camera_tick(&zf3Data->renderer->cam, world->player, *zf3Data->inputManager, *zf3Data->window);
 

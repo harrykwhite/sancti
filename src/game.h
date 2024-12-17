@@ -9,9 +9,11 @@ enum TexIndex {
     PLAYER_TEX,
     ENEMY_TEX,
     PROJECTILE_TEX,
-    CURSOR_TEX,
+    CURSOR_TEX
+};
 
-    TEX_INDEX_CNT
+enum SoundIndex {
+    PLAYER_HURT_SND
 };
 
 union GameStateData {
