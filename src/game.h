@@ -14,15 +14,15 @@ enum TexIndex {
     TEX_INDEX_CNT
 };
 
-struct Game {
-    GameState state;
-
-    union {
-        TitleScreen* titleScreen;
-        World* world;
-    };
+union GameStateData {
+    TitleScreen titleScreen;
+    World world;
 };
 
-bool init_game(const zf3::UserGameFuncData& zf3Data);
-bool game_tick(const zf3::UserGameFuncData& zf3Data);
-void clean_game();
+struct Game {
+    GameState state;
+    GameStateData stateData;
+};
+
+bool init_game(const zf3::UserGameFuncData* const zf3Data);
+bool game_tick(const zf3::UserGameFuncData* const zf3Data);

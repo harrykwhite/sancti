@@ -8,15 +8,15 @@
 	"fonts": [
 		{
 			"relFilePath": "fonts/eb_garamond.ttf",
-			"ptSize": 96
-		},
-		{
-			"relFilePath": "fonts/eb_garamond.ttf",
-			"ptSize": 24
+			"ptSize": 18
 		},
 		{
 			"relFilePath": "fonts/eb_garamond.ttf",
 			"ptSize": 36
+		},
+		{
+			"relFilePath": "fonts/eb_garamond.ttf",
+			"ptSize": 72
 		}
 	]
 }
