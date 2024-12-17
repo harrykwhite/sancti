@@ -4,8 +4,8 @@
 #include "game_states.h"
 
 constexpr int gk_playerInvTime = 45;
-constexpr float gk_playerSwordRotOffsMax = zf3::gk_pi * 0.6f;
-constexpr int gk_playerSwordChargeTimeMax = 20;
+constexpr float gk_playerSwordRotOffsMax = zf3::gk_pi * 0.65f;
+constexpr int gk_playerSwordChargeTimeMax = 15;
 constexpr float gk_playerSwordChargeRotOffs = zf3::gk_pi * 0.15f;
 
 constexpr int gk_enemyLimit = 64;
