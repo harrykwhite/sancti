@@ -5,7 +5,7 @@
 constexpr const float gk_camLookDistLimit = 24.0f;
 constexpr const float gk_camLookDistScalarDist = gk_camLookDistLimit * 32.0f;
 
-static void spawn_player(World& world, const zf3::Vec2D pos) {
+/*static void spawn_player(World& world, const zf3::Vec2D pos) {
     assert(!world.playerActive);
 
     world.playerActive = true;
@@ -31,7 +31,7 @@ static void hurt_player(World& world, const int dmg, const zf3::Vec2D force) {
 }
 
 static zf3::RectFloat get_player_collider(const Player& player) {
-    const zf3::Vec2D playerSize = zf3::get_assets().texSizes[PLAYER_TEX];
+    const zf3::Vec2D playerSize = zf3::get_assets().textures.sizes[PLAYER_TEX];
     const zf3::Vec2D playerTopLeft = player.pos - (playerSize / 2.0f);
 
     return {
@@ -73,7 +73,7 @@ static void spawn_enemy(World& world, const zf3::Vec2D pos) {
 }
 
 static zf3::RectFloat get_enemy_collider(const Enemy& enemy) {
-    const zf3::Vec2D enemySize = zf3::get_assets().texSizes[ENEMY_TEX];
+    const zf3::Vec2D enemySize = zf3::get_assets().textures.sizes[ENEMY_TEX];
     const zf3::Vec2D enemyTopLeft = enemy.pos - (enemySize / 2.0f);
 
     return {
@@ -96,14 +96,14 @@ static void spawn_projectile(World& world, const zf3::Vec2D pos, const zf3::Vec2
 
     world.projectiles[projectileIndex].pos = pos;
     world.projectiles[projectileIndex].vel = vel;
-}
+}*/
 
 void init_world(World& world) {
-    zf3::g_bgColor = {0.59f, 0.79f, 0.93f, 1.0f};
-    zf3::g_camera.scale = 2.0f;
-    zf3::load_render_layers(NUM_RENDER_LAYERS, UI_RENDER_LAYER);
+    //zf3::g_bgColor = {0.59f, 0.79f, 0.93f, 1.0f};
+    //zf3::g_camera.scale = 2.0f;
+    //zf3::load_render_layers(NUM_RENDER_LAYERS, UI_RENDER_LAYER);
 
-    spawn_player(world, {zf3::get_window_size().x / 2.0f, zf3::get_window_size().y / 2.0f});
+    /*spawn_player(world, {zf3::get_window_size().x / 2.0f, zf3::get_window_size().y / 2.0f});
 
     for (int i = 0; i < 3; ++i) {
         const float spawnOffsRange = 64.0f;
@@ -113,10 +113,11 @@ void init_world(World& world) {
         );
 
         spawn_companion(world, spawnPos);
-    }
+    }*/
 }
 
 bool world_tick(World& world, GameState& nextGameState) {
+#if 0
     const zf3::Vec2D mouseCamPos = zf3::screen_to_camera_pos(zf3::get_mouse_pos());
 
     // Update player.
@@ -130,7 +131,7 @@ bool world_tick(World& world, GameState& nextGameState) {
         const float moveSpd = 3.0f;
 
         const zf3::Vec2D velTarg = moveAxis * moveSpd;
-        world.player.vel = zf3::calc_lerp(world.player.vel, velTarg, 0.25f);
+        world.player.vel = zf3::lerp(world.player.vel, velTarg, 0.25f);
         world.player.pos += world.player.vel;
 
         // Handle invincibility.
@@ -153,7 +154,7 @@ bool world_tick(World& world, GameState& nextGameState) {
         const float playerDistMax = 96.0f;
 
         const zf3::Vec2D velTarg = playerDist > playerDistMax ? zf3::calc_normal(world.player.pos - companion.pos) * moveSpd : zf3::Vec2D {};
-        companion.vel = zf3::calc_lerp(companion.vel, velTarg, 0.25f);
+        companion.vel = zf3::lerp(companion.vel, velTarg, 0.25f);
         companion.pos += companion.vel;
     }
 
@@ -205,15 +206,16 @@ bool world_tick(World& world, GameState& nextGameState) {
         const float playerToMouseCamPosDist = zf3::calc_dist(world.player.pos, mouseCamPos);
         const zf3::Vec2D playerToMouseCamPosDir = zf3::calc_normal(mouseCamPos - world.player.pos);
 
-        const float lookDist = gk_camLookDistLimit * zf3::get_min(playerToMouseCamPosDist / gk_camLookDistScalarDist, 1.0f);
+        const float lookDist = gk_camLookDistLimit * zf3::min(playerToMouseCamPosDist / gk_camLookDistScalarDist, 1.0f);
         const zf3::Vec2D lookOffs = playerToMouseCamPosDir * lookDist;
 
         // Determine and approach the target position.
         const zf3::Vec2D targPos = world.player.pos + lookOffs;
-        zf3::g_camera.pos = zf3::calc_lerp(zf3::g_camera.pos, targPos, 0.25f);
+        //zf3::g_camera.pos = zf3::lerp(zf3::g_camera.pos, targPos, 0.25f);
     }
 
     // Write render data.
+    /*
     if (world.playerActive) {
         zf3::write_to_sprite_batch(WORLD_RENDER_LAYER, PLAYER_TEX, world.player.pos, {0, 0, 24, 40});
     }
@@ -243,6 +245,7 @@ bool world_tick(World& world, GameState& nextGameState) {
     }
 
     zf3::write_to_sprite_batch(UI_RENDER_LAYER, CURSOR_TEX, zf3::get_mouse_pos(), {0, 0, 4, 4}, {0.5f, 0.5f}, 0.0f, {zf3::g_camera.scale, zf3::g_camera.scale});
-
+    */
+#endif
     return true;
 }

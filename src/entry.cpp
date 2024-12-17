@@ -5,7 +5,6 @@ int main() {
     const zf3::UserGameInfo gameInfo = {
         .init = init_game,
         .tick = game_tick,
-        .cleanup = clean_game,
         .initWindowWidth = 1280,
         .initWindowHeight = 720,
         .windowTitle = "Sancti",

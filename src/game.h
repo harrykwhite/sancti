@@ -17,14 +17,12 @@ enum TexIndex {
 struct Game {
     GameState state;
 
-    zf3::MemArena memArena;
-
     union {
-        World* world;
         TitleScreen* titleScreen;
+        World* world;
     };
 };
 
-bool init_game();
-bool game_tick();
+bool init_game(const zf3::UserGameFuncData& zf3Data);
+bool game_tick(const zf3::UserGameFuncData& zf3Data);
 void clean_game();
