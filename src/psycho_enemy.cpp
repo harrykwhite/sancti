@@ -5,5 +5,6 @@ void psycho_init(EnemyEnt& ent, void* const entExt) {
 }
 
 void psycho_tick(EnemyEnt& ent, void* const entExt) {
-    ent.pos.x -= 2;
+    ent.vel *= 0.2f;
+    ent.pos += ent.vel;
 }
