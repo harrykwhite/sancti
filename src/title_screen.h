@@ -1,7 +1,6 @@
 #pragma once
 
 #include <zf3.h>
-#include "game_states.h"
 
 enum TitleScreenRenderLayer {
     MAIN_TS_RENDER_LAYER,

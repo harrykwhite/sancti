@@ -1,6 +1,7 @@
 #include "world.h"
 
 #include "game.h"
+#include "sprites.h"
 
 static void spawn_player(World& world, const zf3::Vec2D pos) {
     assert(!world.player.active);
@@ -154,7 +155,7 @@ static void hurt_player(Player& player, const int dmg, const zf3::Vec2D force, z
 }
 
 static zf3::RectFloat get_enemy_collider(const EnemyEnt& enemy) {
-    const zf3::Vec2D size = zf3::get_assets().textures.sizes[ENEMY_TEX];
+    const zf3::Vec2D size = zf3::get_assets().textures.sizes[ENEMIES_TEX];
     const zf3::Vec2D topLeft = enemy.pos - (size / 2.0f);
 
     return {
@@ -204,6 +205,7 @@ bool init_world(World& world, const zf3::UserGameFuncData& zf3Data) {
     }
 
     spawn_enemy(world, PSYCHO_ENEMY, zf3Data.window.size / 2.0f);
+    spawn_enemy(world, WANDERER_ENEMY, zf3Data.window.size / 4.0f);
 
     //
     //
@@ -247,11 +249,16 @@ bool world_tick(World& world, const zf3::UserGameFuncData& zf3Data) {
             alpha = (world.player.invTime & 1) == (gk_playerInvTime & 1) ? 0.5f : 0.75f;
         }
 
-        zf3::write_to_sprite_batch(zf3Data.renderer, ENTS_WORLD_RENDER_LAYER, PLAYER_TEX, world.player.pos, {0, 0, 24, 40}, {0.5f, 0.5f}, 0.0f, {1.0f, 1.0f}, alpha);
+        const Sprite& sprite = get_sprite(PLAYER_SPRITE);
+        zf3::write_to_sprite_batch(zf3Data.renderer, ENTS_WORLD_RENDER_LAYER, sprite.texIndex, world.player.pos, sprite.srcRect, {0.5f, 0.5f}, 0.0f, {1.0f, 1.0f}, alpha);
 
+        // Sword
+        const Sprite swordSprite = get_sprite(SWORD_SPRITE);
+        
         const zf3::Vec2D mouseCamPos = zf3::screen_to_camera_pos(zf3Data.inputManager.inputState.mousePos, zf3Data.renderer.cam, zf3Data.window);
         const float swordRot = zf3::calc_dir(world.player.pos, mouseCamPos) + world.player.swordRotOffs;
-        zf3::write_to_sprite_batch(zf3Data.renderer, ENTS_WORLD_RENDER_LAYER, SWORD_TEX, world.player.pos, {0, 0, 32, 10}, {-0.1f, 0.5f}, swordRot);
+        
+        zf3::write_to_sprite_batch(zf3Data.renderer, ENTS_WORLD_RENDER_LAYER, swordSprite.texIndex, world.player.pos, swordSprite.srcRect, {-0.1f, 0.5f}, swordRot);
     }
 
     // Enemies
@@ -260,8 +267,10 @@ bool world_tick(World& world, const zf3::UserGameFuncData& zf3Data) {
             continue;
         }
 
-        const EnemyEnt& enemyEnt = world.enemyEntsMem.ents[i];
-        zf3::write_to_sprite_batch(zf3Data.renderer, ENTS_WORLD_RENDER_LAYER, ENEMY_TEX, enemyEnt.pos, {0, 0, 24, 36});
+        const EnemyEnt& ent = world.enemyEntsMem.ents[i];
+        const EnemyTypeInfo& typeInfo = get_enemy_type_info(ent.type);
+        const Sprite& sprite = get_sprite(typeInfo.spriteIndex);
+        zf3::write_to_sprite_batch(zf3Data.renderer, ENTS_WORLD_RENDER_LAYER, sprite.texIndex, ent.pos, sprite.srcRect);
     }
 
     // Hitboxes
@@ -275,7 +284,8 @@ bool world_tick(World& world, const zf3::UserGameFuncData& zf3Data) {
     }
 
     // Cursor
-    zf3::write_to_sprite_batch(zf3Data.renderer, UI_WORLD_RENDER_LAYER, CURSOR_TEX, zf3Data.inputManager.inputState.mousePos, {0, 0, 4, 4}, {0.5f, 0.5f}, 0.0f, {zf3Data.renderer.cam.scale, zf3Data.renderer.cam.scale});
+    const Sprite& cursorSprite = get_sprite(CURSOR_SPRITE);
+    zf3::write_to_sprite_batch(zf3Data.renderer, UI_WORLD_RENDER_LAYER, cursorSprite.texIndex, zf3Data.inputManager.inputState.mousePos, cursorSprite.srcRect, {0.5f, 0.5f}, 0.0f, {zf3Data.renderer.cam.scale, zf3Data.renderer.cam.scale});
 
     clear_bits(world.hitboxes.activity);
 

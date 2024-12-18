@@ -13,6 +13,7 @@ find_package(glfw3 CONFIG REQUIRED)
 add_executable(sancti
 	src/entry.cpp
 	src/game.cpp
+	src/sprites.cpp
 	src/title_screen.cpp
 	src/world.cpp
 	src/enemy_types.cpp
@@ -21,7 +22,8 @@ add_executable(sancti
 	src/psycho_enemy.cpp
 
 	src/game.h
-	src/game_states.h
+	src/asset_indexes.h
+	src/sprites.h
 	src/title_screen.h
 	src/world.h
 	src/enemies.h

@@ -1,7 +1,6 @@
 #pragma once
 
 #include <zf3.h>
-#include "game_states.h"
 #include "enemies.h"
 
 constexpr int gk_playerInvTime = 45;

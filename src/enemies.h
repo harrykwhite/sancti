@@ -1,6 +1,7 @@
 #pragma once
 
 #include <zf3.h>
+#include "sprites.h"
 
 constexpr int gk_enemyEntsMemSize = zf3::megabytes_to_bytes(1);
 
@@ -26,6 +27,7 @@ struct EnemyTypeInfo {
     void (*tick)(EnemyEnt& ent, void* const entExt);
     int entExtSize;
     int entExtAlignment;
+    SpriteIndex spriteIndex;
 };
 
 struct WandererEnemyEnt {

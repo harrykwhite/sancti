@@ -1,23 +1,8 @@
 #pragma once
 
 #include <zf3.h>
-#include "game_states.h"
 #include "title_screen.h"
 #include "world.h"
-#include "enemies.h"
-
-enum TexIndex {
-    PLAYER_TEX,
-    SWORD_TEX,
-    ENEMY_TEX,
-    PROJECTILE_TEX,
-    HITBOX_TEX,
-    CURSOR_TEX
-};
-
-enum SoundIndex {
-    PLAYER_HURT_SND
-};
 
 struct Game {
     union {

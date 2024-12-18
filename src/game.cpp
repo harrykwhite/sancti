@@ -1,8 +1,11 @@
 #include "game.h"
 
+#include "sprites.h"
+
 static Game i_game;
 
 bool init_game(const zf3::UserGameFuncData& zf3Data) {
+    init_sprites();
     init_enemy_types();
     init_title_screen(i_game.titleScreen, zf3Data);
     return true;
