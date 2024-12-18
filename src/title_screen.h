@@ -14,4 +14,4 @@ struct TitleScreen {
 };
 
 void init_title_screen(TitleScreen& ts, const zf3::UserGameFuncData& zf3Data);
-bool title_screen_tick(TitleScreen& ts, GameState& nextGameState, const zf3::UserGameFuncData& zf3Data);
+void title_screen_tick(TitleScreen& ts, const zf3::UserGameFuncData& zf3Data);

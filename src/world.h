@@ -2,13 +2,13 @@
 
 #include <zf3.h>
 #include "game_states.h"
+#include "enemies.h"
 
 constexpr int gk_playerInvTime = 45;
 constexpr float gk_playerSwordRotOffsMax = zf3::gk_pi * 0.65f;
 constexpr int gk_playerSwordChargeTimeMax = 15;
 constexpr float gk_playerSwordChargeRotOffs = zf3::gk_pi * 0.15f;
 
-constexpr int gk_enemyLimit = 64;
 constexpr int gk_enemySpawnInterval = 120;
 
 constexpr int gk_hitboxLimit = 32;
@@ -33,14 +33,6 @@ struct Player {
     int swordChargeTime;
 };
 
-struct Enemy {
-    zf3::Vec2D pos;
-    zf3::Vec2D vel;
-    int hp;
-};
-
-using EnemyActivityBuf = zf3::ActivityBuf<Enemy, gk_enemyLimit>;
-
 enum HitboxProps {
     HITBOX_PROPS_UNDEFINED = 0,
     HITBOX_PROPS_DMG_PLAYER = 1 << 0,
@@ -61,11 +53,13 @@ using HitboxActivityBuf = zf3::ActivityBuf<Hitbox, gk_hitboxLimit>;
 struct World {
     Player player;
 
-    EnemyActivityBuf enemies;
-    int enemySpawnTime;
+    EnemyEntsMem enemyEntsMem;
+    EnemyEntsMemInfo enemyEntsMemInfo;
+    int enemyEntSpawnTime;
 
     HitboxActivityBuf hitboxes;
 };
 
-void init_world(World& world, const zf3::UserGameFuncData& zf3Data);
-bool world_tick(World& world, GameState& nextGameState, const zf3::UserGameFuncData& zf3Data);
+bool init_world(World& world, const zf3::UserGameFuncData& zf3Data);
+bool world_tick(World& world, const zf3::UserGameFuncData& zf3Data);
+void clean_world(World& world);

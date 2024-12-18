@@ -4,6 +4,7 @@
 #include "game_states.h"
 #include "title_screen.h"
 #include "world.h"
+#include "enemies.h"
 
 enum TexIndex {
     PLAYER_TEX,
@@ -18,15 +19,15 @@ enum SoundIndex {
     PLAYER_HURT_SND
 };
 
-union GameStateData {
-    TitleScreen titleScreen;
-    World world;
-};
-
 struct Game {
-    GameState state;
-    GameStateData stateData;
+    union {
+        TitleScreen titleScreen;
+        World world;
+    };
+
+    bool inWorld;
 };
 
 bool init_game(const zf3::UserGameFuncData& zf3Data);
 bool game_tick(const zf3::UserGameFuncData& zf3Data);
+void clean_game();

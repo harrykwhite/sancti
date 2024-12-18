@@ -15,11 +15,16 @@ add_executable(sancti
 	src/game.cpp
 	src/title_screen.cpp
 	src/world.cpp
+	src/enemy_types.cpp
+	src/enemy_ents.cpp
+	src/wanderer_enemy.cpp
+	src/psycho_enemy.cpp
 
 	src/game.h
 	src/game_states.h
 	src/title_screen.h
 	src/world.h
+	src/enemies.h
 )
 
 target_include_directories(sancti PRIVATE

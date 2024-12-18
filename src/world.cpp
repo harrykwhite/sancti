@@ -12,21 +12,39 @@ static void spawn_player(World& world, const zf3::Vec2D pos) {
     };
 }
 
-static int spawn_enemy(World& world, const zf3::Vec2D pos) {
-    const int enemyIndex = zf3::get_first_inactive_bit_index(world.enemies.activity);
+static bool spawn_enemy(World& world, const EnemyType type, const zf3::Vec2D pos) {
+    const EnemyEntsMem& entsMem = world.enemyEntsMem;
+    const EnemyEntsMemInfo& entsMemInfo = world.enemyEntsMemInfo;
 
-    if (enemyIndex != -1) {
-        zf3::activate_bit(world.enemies.activity, enemyIndex);
+    const int entIndex = zf3::get_first_inactive_bit_index(entsMem.entActivity, entsMemInfo.entLimit);
 
-        world.enemies[enemyIndex] = {
-            .pos = pos,
-            .hp = 3 // TEMP
-        };
-    } else {
-        zf3::log_error("Failed to spawn enemy as all enemy slots are taken!");
+    if (entIndex == -1) {
+        return false;
     }
 
-    return enemyIndex;
+    const int entExtIndex = zf3::get_first_inactive_bit_index(entsMem.entExtsActivities[type], entsMemInfo.entTypeMaxCnts[type]);
+
+    if (entExtIndex == -1) {
+        return false;
+    }
+
+    EnemyEnt& ent = entsMem.ents[entIndex];
+    void* const entExt = get_enemy_ent_ext(entIndex, world.enemyEntsMem);
+
+    ent = {
+        .type = type,
+        .extIndex = entExtIndex,
+        .pos = pos
+    };
+
+    get_enemy_type_info(type).init(ent, entExt);
+
+    assert(ent.hp > 0);
+
+    zf3::activate_bit(entsMem.entActivity, entIndex);
+    zf3::activate_bit(entsMem.entExtsActivities[type], entExtIndex);
+
+    return true;
 }
 
 static int spawn_hitbox(HitboxActivityBuf& hitboxes, const zf3::Vec2D pos, const zf3::Vec2D size, const int dmg, const zf3::Vec2D force, const HitboxPropsBitset props) {
@@ -135,7 +153,7 @@ static void hurt_player(Player& player, const int dmg, const zf3::Vec2D force, z
     }
 }
 
-static zf3::RectFloat get_enemy_collider(const Enemy& enemy) {
+static zf3::RectFloat get_enemy_collider(const EnemyEnt& enemy) {
     const zf3::Vec2D size = zf3::get_assets().textures.sizes[ENEMY_TEX];
     const zf3::Vec2D topLeft = enemy.pos - (size / 2.0f);
 
@@ -145,75 +163,6 @@ static zf3::RectFloat get_enemy_collider(const Enemy& enemy) {
         size.x,
         size.y
     };
-}
-
-static void enemy_tick(Enemy& enemy) {
-    enemy.pos += enemy.vel;
-    enemy.vel = zf3::lerp(enemy.vel, {}, 0.25f);
-}
-
-static void hurt_enemy(EnemyActivityBuf& enemies, const int enemyIndex, const int dmg, const zf3::Vec2D force, zf3::SoundSrcManager& sndSrcManager) {
-    Enemy& enemy = enemies[enemyIndex];
-
-    enemy.vel += force;
-
-    enemy.hp -= dmg;
-
-    if (enemy.hp <= 0) {
-        zf3::deactivate_bit(enemies.activity, enemyIndex);
-    }
-}
-
-static void proc_player_enemy_collisions(Player& player, EnemyActivityBuf& enemies, zf3::SoundSrcManager& sndSrcManager) {
-    assert(player.active);
-
-    const zf3::RectFloat playerCollider = get_player_collider(player);
-
-    for (int i = 0; i < gk_enemyLimit; ++i) {
-        if (!zf3::is_bit_active(enemies.activity, i)) {
-            continue;
-        }
-
-        const zf3::RectFloat enemyCollider = get_enemy_collider(enemies[i]);
-
-        if (zf3::do_rects_intersect(playerCollider, enemyCollider)) {
-            hurt_player(player, 1, zf3::calc_normal(player.pos - enemies[i].pos) * 12.0f, sndSrcManager);
-        }
-    }
-}
-
-static void proc_hitbox_collisions(HitboxActivityBuf& hitboxes, Player& player, EnemyActivityBuf& enemies, zf3::SoundSrcManager& sndSrcManager) {
-    const zf3::RectFloat playerCollider = player.active ? get_player_collider(player) : zf3::RectFloat {};
-
-    for (int i = 0; i < gk_hitboxLimit; ++i) {
-        if (!zf3::is_bit_active(hitboxes.activity, i)) {
-            continue;
-        }
-
-        const Hitbox& hitbox = hitboxes[i];
-
-        if (hitbox.props & HITBOX_PROPS_DMG_PLAYER) {
-            if (player.active) {
-                if (zf3::do_rects_intersect(playerCollider, hitbox.rect)) {
-                    hurt_player(player, hitbox.dmg, hitbox.force, sndSrcManager);
-                }
-            }
-        }
-
-        if (hitbox.props & HITBOX_PROPS_DMG_ENEMY) {
-            for (int j = 0; j < gk_enemyLimit; ++j) {
-                if (!zf3::is_bit_active(enemies.activity, j)) {
-                    continue;
-                }
-
-                const zf3::RectFloat enemyCollider = get_enemy_collider(enemies[j]);
-
-                if (zf3::do_rects_intersect(hitbox.rect, enemyCollider)) {
-                    hurt_enemy(enemies, j, hitbox.dmg, hitbox.force, sndSrcManager);
-                }
-            }
-        }
-    }
 }
 
 static void camera_tick(zf3::Camera& cam, const Player& player, const zf3::InputManager& inputManager, const zf3::Window& window) {
@@ -237,7 +186,28 @@ static void camera_tick(zf3::Camera& cam, const Player& player, const zf3::Input
     cam.pos = zf3::lerp(cam.pos, targPos, 0.25f);
 }
 
-void init_world(World& world, const zf3::UserGameFuncData& zf3Data) {
+bool init_world(World& world, const zf3::UserGameFuncData& zf3Data) {
+    zf3::zero_out(world);
+
+    //
+    // Reserve memory for enemy entities.
+    //
+    world.enemyEntsMemInfo = {
+        .entLimit = 64
+    };
+
+    world.enemyEntsMemInfo.entTypeMaxCnts[WANDERER_ENEMY] = 32;
+    world.enemyEntsMemInfo.entTypeMaxCnts[PSYCHO_ENEMY] = 32;
+
+    if (!gen_enemy_ents_mem(world.enemyEntsMem, world.enemyEntsMemInfo)) {
+        return false;
+    }
+
+    spawn_enemy(world, PSYCHO_ENEMY, zf3Data.window.size / 2.0f);
+
+    //
+    //
+    //
     zf3::reset_renderer(zf3Data.renderer, NUM_WORLD_RENDER_LAYERS, UI_WORLD_RENDER_LAYER, {0.59f, 0.79f, 0.93f});
 
     const auto musicSrcID = zf3::add_music_src(zf3Data.musicSrcManager, 0);
@@ -245,39 +215,23 @@ void init_world(World& world, const zf3::UserGameFuncData& zf3Data) {
 
     spawn_player(world, zf3Data.window.size / 4.0f);
     zf3Data.renderer.cam.pos = world.player.pos;
+
+    return true;
 }
 
-bool world_tick(World& world, GameState& nextGameState, const zf3::UserGameFuncData& zf3Data) {
+bool world_tick(World& world, const zf3::UserGameFuncData& zf3Data) {
     if (world.player.active) {
         player_tick(world.player, world.hitboxes, zf3Data.inputManager, zf3Data.renderer.cam, zf3Data.window);
     }
 
-    if (world.enemySpawnTime > 0) {
-        --world.enemySpawnTime;
-    } else {
-        const zf3::Vec2D spawnPos = {
-            zf3::gen_rand_float(0.0f, zf3Data.window.size.x / 2.0f),
-            zf3::gen_rand_float(0.0f, zf3Data.window.size.y / 2.0f)
-        };
-
-        spawn_enemy(world, spawnPos);
-
-        world.enemySpawnTime = gk_enemySpawnInterval;
-    }
-
-    for (int i = 0; i < gk_enemyLimit; ++i) {
-        if (!zf3::is_bit_active(world.enemies.activity.bytes, i)) {
+    for (int i = 0; i < world.enemyEntsMemInfo.entLimit; ++i) {
+        if (!zf3::is_bit_active(world.enemyEntsMem.entActivity, i)) {
             continue;
         }
 
-        enemy_tick(world.enemies[i]);
+        EnemyEnt& enemyEnt = world.enemyEntsMem.ents[i];
+        get_enemy_type_info(enemyEnt.type).tick(enemyEnt, get_enemy_ent_ext(i, world.enemyEntsMem));
     }
-
-    if (world.player.active) {
-        proc_player_enemy_collisions(world.player, world.enemies, zf3Data.sndSrcManager);
-    }
-
-    proc_hitbox_collisions(world.hitboxes, world.player, world.enemies, zf3Data.sndSrcManager);
 
     camera_tick(zf3Data.renderer.cam, world.player, zf3Data.inputManager, zf3Data.window);
 
@@ -301,12 +255,13 @@ bool world_tick(World& world, GameState& nextGameState, const zf3::UserGameFuncD
     }
 
     // Enemies
-    for (int i = 0; i < gk_enemyLimit; ++i) {
-        if (!zf3::is_bit_active(world.enemies.activity.bytes, i)) {
+    for (int i = 0; i < world.enemyEntsMemInfo.entLimit; ++i) {
+        if (!zf3::is_bit_active(world.enemyEntsMem.entActivity, i)) {
             continue;
         }
 
-        zf3::write_to_sprite_batch(zf3Data.renderer, ENTS_WORLD_RENDER_LAYER, ENEMY_TEX, world.enemies[i].pos, {0, 0, 24, 36});
+        const EnemyEnt& enemyEnt = world.enemyEntsMem.ents[i];
+        zf3::write_to_sprite_batch(zf3Data.renderer, ENTS_WORLD_RENDER_LAYER, ENEMY_TEX, enemyEnt.pos, {0, 0, 24, 36});
     }
 
     // Hitboxes
@@ -322,10 +277,11 @@ bool world_tick(World& world, GameState& nextGameState, const zf3::UserGameFuncD
     // Cursor
     zf3::write_to_sprite_batch(zf3Data.renderer, UI_WORLD_RENDER_LAYER, CURSOR_TEX, zf3Data.inputManager.inputState.mousePos, {0, 0, 4, 4}, {0.5f, 0.5f}, 0.0f, {zf3Data.renderer.cam.scale, zf3Data.renderer.cam.scale});
 
-    //
-    //
-    //
     clear_bits(world.hitboxes.activity);
 
     return true;
+}
+
+void clean_world(World& world) {
+    world.enemyEntsMem.arena.clean();
 }

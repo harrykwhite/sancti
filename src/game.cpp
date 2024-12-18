@@ -2,54 +2,34 @@
 
 static Game i_game;
 
-static void load_state(const GameState state, const zf3::UserGameFuncData& zf3Data) {
-    i_game.state = state;
-    zf3::zero_out(i_game.stateData);
-
-    switch (state) {
-        case TITLE_SCREEN_GAME_STATE:
-            init_title_screen(i_game.stateData.titleScreen, zf3Data);
-            break;
-
-        case WORLD_GAME_STATE:
-            init_world(i_game.stateData.world, zf3Data);
-            break;
-
-        default:
-            assert(false);
-            break;
-    }
-}
-
 bool init_game(const zf3::UserGameFuncData& zf3Data) {
-    load_state(TITLE_SCREEN_GAME_STATE, zf3Data);
+    init_enemy_types();
+    init_title_screen(i_game.titleScreen, zf3Data);
     return true;
 }
 
 bool game_tick(const zf3::UserGameFuncData& zf3Data) {
-    bool success = false;
+    if (i_game.inWorld) {
+        if (!world_tick(i_game.world, zf3Data)) {
+            return false;
+        }
+    } else {
+        title_screen_tick(i_game.titleScreen, zf3Data);
 
-    GameState nextState = INVALID_GAME_STATE;
+        if (zf3::is_key_pressed(zf3::KEY_ENTER, zf3Data.inputManager)) {
+            i_game.inWorld = true;
 
-    switch (i_game.state) {
-        case TITLE_SCREEN_GAME_STATE:
-            success = title_screen_tick(i_game.stateData.titleScreen, nextState, zf3Data);
-            break;
-
-        case WORLD_GAME_STATE:
-            success = world_tick(i_game.stateData.world, nextState, zf3Data);
-            break;
-
-        default:
-            assert(false);
-            break;
-    }
-
-    if (success) {
-        if (nextState != INVALID_GAME_STATE) {
-            load_state(nextState, zf3Data);
+            if (!init_world(i_game.world, zf3Data)) {
+                return false;
+            }
         }
     }
 
-    return success;
+    return true;
+}
+
+void clean_game() {
+    if (i_game.inWorld) {
+        clean_world(i_game.world);
+    }
 }
