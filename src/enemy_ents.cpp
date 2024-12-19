@@ -1,29 +1,18 @@
 #include "enemies.h"
 
-bool gen_enemy_ents_mem(EnemyEntsMem& mem, const EnemyEntsMemInfo& memInfo) {
+EnemyEntsMemPtrs reserve_enemy_ents_mem(zf3::MemArena& memArena, const EnemyEntsMemInfo& memInfo) {
     assert(memInfo.entLimit > 0);
 
-    if (!mem.arena.init(gk_enemyEntsMemSize)) {
-        return false;
-    }
+    EnemyEntsMemPtrs memPtrs;
 
-    mem.ents = mem.arena.push<EnemyEnt>(memInfo.entLimit);
+    memPtrs.ents = memArena.push<EnemyEnt>(memInfo.entLimit);
+    assert(memPtrs.ents);
 
-    if (!mem.ents) {
-        mem.arena.clean();
-        return false;
-    }
-
-    mem.entActivity = mem.arena.push<zf3::Byte>(zf3::bits_to_bytes(memInfo.entLimit));
-
-    if (!mem.entActivity) {
-        mem.arena.clean();
-        return false;
-    }
+    memPtrs.entActivity = memArena.push<zf3::Byte>(zf3::bits_to_bytes(memInfo.entLimit));
+    assert(memPtrs.entActivity);
 
     for (int i = 0; i < ENEMY_TYPE_CNT; ++i) {
         const int typeMaxCnt = memInfo.entTypeMaxCnts[i];
-
         assert(typeMaxCnt >= 0 && typeMaxCnt <= memInfo.entLimit);
 
         if (!typeMaxCnt) {
@@ -31,20 +20,12 @@ bool gen_enemy_ents_mem(EnemyEntsMem& mem, const EnemyEntsMemInfo& memInfo) {
         }
 
         const EnemyTypeInfo& typeInfo = get_enemy_type_info(static_cast<EnemyType>(i));
-        mem.entExts[i] = mem.arena.push_size(typeInfo.entExtSize * typeMaxCnt, typeInfo.entExtAlignment);
+        memPtrs.entExts[i] = memArena.push_size(typeInfo.entExtSize * typeMaxCnt, typeInfo.entExtAlignment);
+        assert(memPtrs.entExts[i]);
 
-        if (!mem.entExts[i]) {
-            mem.arena.clean();
-            return false;
-        }
-
-        mem.entExtsActivities[i] = mem.arena.push<zf3::Byte>(zf3::bits_to_bytes(typeMaxCnt));
-
-        if (!mem.entExtsActivities[i]) {
-            mem.arena.clean();
-            return false;
-        }
+        memPtrs.entExtsActivities[i] = memArena.push<zf3::Byte>(zf3::bits_to_bytes(typeMaxCnt));
+        assert(memPtrs.entExtsActivities[i]);
     }
 
-    return true;
+    return memPtrs;
 }

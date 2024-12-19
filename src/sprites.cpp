@@ -4,14 +4,14 @@ static Sprite i_sprites[SPRITE_CNT];
 static bool i_spritesInitialized = false;
 
 static Sprite create_default(const TexIndex texIndex) {
-    const zf3::Vec2DInt texSize = zf3::get_assets().textures.sizes[texIndex];
+    const zf3::Pt2D texSize = zf3::get_assets().textures.sizes[texIndex];
     return {texIndex, {0, 0, texSize.x, texSize.y}};
 }
 
 void init_sprites() {
     assert(!i_spritesInitialized);
 
-    const zf3::Vec2DInt* const texSizes = zf3::get_assets().textures.sizes;
+    const zf3::Pt2D* const texSizes = zf3::get_assets().textures.sizes;
 
     i_sprites[PLAYER_SPRITE] = create_default(PLAYER_TEX);
     i_sprites[SWORD_SPRITE] = create_default(SWORD_TEX);

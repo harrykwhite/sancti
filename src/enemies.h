@@ -39,16 +39,6 @@ struct PsychoEnemyEnt {
     int a;
 };
 
-struct EnemyEntsMem {
-    zf3::MemArena arena;
-
-    EnemyEnt* ents;
-    zf3::Byte* entActivity;
-
-    void* entExts[ENEMY_TYPE_CNT];
-    zf3::Byte* entExtsActivities[ENEMY_TYPE_CNT];
-};
-
 struct EnemyEntsMemPtrs {
     EnemyEnt* ents;
     zf3::Byte* entActivity;
@@ -62,10 +52,15 @@ struct EnemyEntsMemInfo {
     int entTypeMaxCnts[ENEMY_TYPE_CNT];
 };
 
+struct EnemyEntsMem {
+    EnemyEntsMemPtrs ptrs;
+    EnemyEntsMemInfo info;
+};
+
 void init_enemy_types();
 const EnemyTypeInfo& get_enemy_type_info(const EnemyType type);
 
-bool gen_enemy_ents_mem(EnemyEntsMem& mem, const EnemyEntsMemInfo& memInfo);
+EnemyEntsMemPtrs reserve_enemy_ents_mem(zf3::MemArena& memArena, const EnemyEntsMemInfo& memInfo);
 
 void wanderer_init(EnemyEnt& ent, void* const entExt);
 void wanderer_tick(EnemyEnt& ent, void* const entExt);
@@ -74,6 +69,8 @@ void psycho_init(EnemyEnt& ent, void* const entExt);
 void psycho_tick(EnemyEnt& ent, void* const entExt);
 
 inline void* get_enemy_ent_ext(const int entIndex, const EnemyEntsMem& mem) {
-    const EnemyEnt& ent = mem.ents[entIndex];
-    return static_cast<zf3::Byte*>(mem.entExts[ent.type]) + (ent.extIndex * get_enemy_type_info(ent.type).entExtSize);
+    assert(entIndex >= 0 && entIndex < mem.info.entLimit);
+
+    const EnemyEnt& ent = mem.ptrs.ents[entIndex];
+    return static_cast<zf3::Byte*>(mem.ptrs.entExts[ent.type]) + (ent.extIndex * get_enemy_type_info(ent.type).entExtSize);
 }

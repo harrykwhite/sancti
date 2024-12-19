@@ -5,6 +5,6 @@ void wanderer_init(EnemyEnt& ent, void* const entExt) {
 }
 
 void wanderer_tick(EnemyEnt& ent, void* const entExt) {
-    ent.vel *= 0.2f;
+    ent.vel *= 0.75f;
     ent.pos += ent.vel;
 }

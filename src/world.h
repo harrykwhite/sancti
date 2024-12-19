@@ -3,6 +3,8 @@
 #include <zf3.h>
 #include "enemies.h"
 
+constexpr int gk_worldMemArenaSize = zf3::megabytes_to_bytes(2);
+
 constexpr int gk_playerInvTime = 45;
 constexpr float gk_playerSwordRotOffsMax = zf3::gk_pi * 0.65f;
 constexpr int gk_playerSwordChargeTimeMax = 15;
@@ -50,10 +52,13 @@ struct Hitbox {
 using HitboxActivityBuf = zf3::ActivityBuf<Hitbox, gk_hitboxLimit>;
 
 struct World {
+    zf3::MemArena memArena;
+
+    zf3::Pt2D size;
+
     Player player;
 
     EnemyEntsMem enemyEntsMem;
-    EnemyEntsMemInfo enemyEntsMemInfo;
     int enemyEntSpawnTime;
 
     HitboxActivityBuf hitboxes;

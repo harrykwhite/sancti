@@ -14,23 +14,22 @@ static void spawn_player(World& world, const zf3::Vec2D pos) {
 }
 
 static bool spawn_enemy(World& world, const EnemyType type, const zf3::Vec2D pos) {
-    const EnemyEntsMem& entsMem = world.enemyEntsMem;
-    const EnemyEntsMemInfo& entsMemInfo = world.enemyEntsMemInfo;
+    EnemyEntsMem& entsMem = world.enemyEntsMem;
 
-    const int entIndex = zf3::get_first_inactive_bit_index(entsMem.entActivity, entsMemInfo.entLimit);
+    const int entIndex = zf3::get_first_inactive_bit_index(entsMem.ptrs.entActivity, entsMem.info.entLimit);
 
     if (entIndex == -1) {
         return false;
     }
 
-    const int entExtIndex = zf3::get_first_inactive_bit_index(entsMem.entExtsActivities[type], entsMemInfo.entTypeMaxCnts[type]);
+    const int entExtIndex = zf3::get_first_inactive_bit_index(entsMem.ptrs.entExtsActivities[type], entsMem.info.entTypeMaxCnts[type]);
 
     if (entExtIndex == -1) {
         return false;
     }
 
-    EnemyEnt& ent = entsMem.ents[entIndex];
-    void* const entExt = get_enemy_ent_ext(entIndex, world.enemyEntsMem);
+    EnemyEnt& ent = entsMem.ptrs.ents[entIndex];
+    void* const entExt = get_enemy_ent_ext(entIndex, entsMem);
 
     ent = {
         .type = type,
@@ -42,8 +41,8 @@ static bool spawn_enemy(World& world, const EnemyType type, const zf3::Vec2D pos
 
     assert(ent.hp > 0);
 
-    zf3::activate_bit(entsMem.entActivity, entIndex);
-    zf3::activate_bit(entsMem.entExtsActivities[type], entExtIndex);
+    zf3::activate_bit(entsMem.ptrs.entActivity, entIndex);
+    zf3::activate_bit(entsMem.ptrs.entExtsActivities[type], entExtIndex);
 
     return true;
 }
@@ -74,7 +73,7 @@ static int spawn_hitbox(HitboxActivityBuf& hitboxes, const zf3::Vec2D pos, const
 static zf3::RectFloat get_player_collider(const Player& player) {
     assert(player.active);
 
-    const zf3::Vec2D size = get_sprite(PLAYER_SPRITE).srcRect.get_size();
+    const zf3::Vec2D size = to_vec_2d(get_sprite(PLAYER_SPRITE).srcRect.get_size());
     const zf3::Vec2D topLeft = player.pos - (size / 2.0f);
 
     return {
@@ -115,10 +114,10 @@ static void player_tick(Player& player, HitboxActivityBuf& hitboxes, const zf3::
         player.swordChargeTime = 0;
         player.swordRotAxis = !player.swordRotAxis;
 
-        const zf3::Vec2D hitboxDir = zf3::calc_normal(mouseCamPos - player.pos);
+        const zf3::Vec2D hitboxDir = zf3::normalized(mouseCamPos - player.pos);
         const float hitboxPosDist = 32.0f;
         const zf3::Vec2D hitboxPos = player.pos + (hitboxDir * hitboxPosDist);
-        const float hitboxStrength = 9.0f;
+        const float hitboxStrength = 11.0f;
 
         spawn_hitbox(hitboxes, hitboxPos, {24.0f, 24.0f}, 1, hitboxDir * hitboxStrength, HITBOX_PROPS_DMG_ENEMY);
     }
@@ -156,7 +155,7 @@ static void hurt_player(Player& player, const int dmg, const zf3::Vec2D force, z
 
 static zf3::RectFloat get_enemy_collider(const EnemyEnt& enemy) {
     const EnemyTypeInfo& typeInfo = get_enemy_type_info(enemy.type);
-    const zf3::Vec2D size = get_sprite(typeInfo.spriteIndex).srcRect.get_size();
+    const zf3::Vec2D size = zf3::to_vec_2d(get_sprite(typeInfo.spriteIndex).srcRect.get_size());
     const zf3::Vec2D topLeft = enemy.pos - (size / 2.0f);
 
     return {
@@ -168,37 +167,37 @@ static zf3::RectFloat get_enemy_collider(const EnemyEnt& enemy) {
 }
 
 static void hurt_enemy(EnemyEntsMem& entsMem, const int enemyIndex, const int dmg, const zf3::Vec2D force, zf3::SoundSrcManager& sndSrcManager) {
-    EnemyEnt& ent = entsMem.ents[enemyIndex];
+    EnemyEnt& ent = entsMem.ptrs.ents[enemyIndex];
 
     ent.vel += force;
 
     ent.hp -= dmg;
 
     if (ent.hp <= 0) {
-        zf3::deactivate_bit(entsMem.entActivity, enemyIndex);
+        zf3::deactivate_bit(entsMem.ptrs.entActivity, enemyIndex);
     }
 }
 
 static void proc_player_enemy_collisions(Player& player, const EnemyEntsMem& enemyEntsMem, const EnemyEntsMemInfo& enemyEntsMemInfo, zf3::SoundSrcManager& sndSrcManager) {
     assert(player.active);
-    
+
     const zf3::RectFloat playerCollider = get_player_collider(player);
 
     for (int i = 0; i < enemyEntsMemInfo.entLimit; ++i) {
-        if (!zf3::is_bit_active(enemyEntsMem.entActivity, i)) {
+        if (!zf3::is_bit_active(enemyEntsMem.ptrs.entActivity, i)) {
             continue;
         }
 
-        const EnemyEnt& enemyEnt = enemyEntsMem.ents[i];
+        const EnemyEnt& enemyEnt = enemyEntsMem.ptrs.ents[i];
         const zf3::RectFloat enemyEntCollider = get_enemy_collider(enemyEnt);
 
         if (zf3::do_rects_intersect(playerCollider, enemyEntCollider)) {
-            hurt_player(player, 1, zf3::calc_normal(player.pos - enemyEnt.pos) * 12.0f, sndSrcManager);
+            hurt_player(player, 1, zf3::normalized(player.pos - enemyEnt.pos) * 14.0f, sndSrcManager);
         }
     }
 }
 
-static void proc_hitbox_collisions(HitboxActivityBuf& hitboxes, Player& player, EnemyEntsMem& enemyEntsMem, const EnemyEntsMemInfo& enemyEntsMemInfo, zf3::SoundSrcManager& sndSrcManager) {
+static void proc_hitbox_collisions(HitboxActivityBuf& hitboxes, Player& player, EnemyEntsMem& enemyEntsMem, zf3::SoundSrcManager& sndSrcManager) {
     const zf3::RectFloat playerCollider = get_player_collider(player);
 
     for (int i = 0; i < gk_hitboxLimit; ++i) {
@@ -215,12 +214,12 @@ static void proc_hitbox_collisions(HitboxActivityBuf& hitboxes, Player& player, 
         }
 
         if (hitbox.props & HITBOX_PROPS_DMG_ENEMY) {
-            for (int j = 0; j < enemyEntsMemInfo.entLimit; ++j) {
-                if (!zf3::is_bit_active(enemyEntsMem.entActivity, j)) {
+            for (int j = 0; j < enemyEntsMem.info.entLimit; ++j) {
+                if (!zf3::is_bit_active(enemyEntsMem.ptrs.entActivity, j)) {
                     continue;
                 }
 
-                const zf3::RectFloat enemyCollider = get_enemy_collider(enemyEntsMem.ents[j]);
+                const zf3::RectFloat enemyCollider = get_enemy_collider(enemyEntsMem.ptrs.ents[j]);
 
                 if (zf3::do_rects_intersect(hitbox.rect, enemyCollider)) {
                     hurt_enemy(enemyEntsMem, j, hitbox.dmg, hitbox.force, sndSrcManager);
@@ -230,44 +229,58 @@ static void proc_hitbox_collisions(HitboxActivityBuf& hitboxes, Player& player, 
     }
 }
 
-static void camera_tick(zf3::Camera& cam, const Player& player, const zf3::InputManager& inputManager, const zf3::Window& window) {
+static void camera_tick(zf3::Camera& cam, World& world, const zf3::InputManager& inputManager, const zf3::Window& window) {
     static constexpr float lk_lookDistLimit = 24.0f;
     static constexpr float lk_lookDistScalarDist = lk_lookDistLimit * 32.0f;
+
+    const zf3::Pt2D camSize = zf3::get_camera_size(cam, window);
 
     // Determine the look offset.
     zf3::Vec2D lookOffs = {};
 
-    if (player.active) {
+    if (world.player.active) {
         const zf3::Vec2D mouseCamPos = zf3::screen_to_camera_pos(inputManager.inputState.mousePos, cam, window);
-        const float playerToMouseCamPosDist = zf3::calc_dist(player.pos, mouseCamPos);
-        const zf3::Vec2D playerToMouseCamPosDir = zf3::calc_normal(mouseCamPos - player.pos);
+        const float playerToMouseCamPosDist = zf3::calc_dist(world.player.pos, mouseCamPos);
+        const zf3::Vec2D playerToMouseCamPosDir = zf3::normalized(mouseCamPos - world.player.pos);
 
         const float lookDist = lk_lookDistLimit * zf3::min(playerToMouseCamPosDist / lk_lookDistScalarDist, 1.0f);
         lookOffs = playerToMouseCamPosDir * lookDist;
     }
 
     // Determine and approach the target position.
-    zf3::Vec2D targPos = player.pos + lookOffs; // NOTE: We use the player position even if they're inactive.
+    const zf3::Vec2D targPos = world.player.pos + lookOffs; // NOTE: We use the player position even if they're inactive.
     cam.pos = zf3::lerp(cam.pos, targPos, 0.25f);
+
+    // Clamp position within world boundaries.
+    cam.pos = {
+        zf3::clamp(cam.pos.x, camSize.x / 2.0f, world.size.x - (camSize.x / 2.0f)),
+        zf3::clamp(cam.pos.y, camSize.y / 2.0f, world.size.y - (camSize.y / 2.0f))
+    };
 }
 
 bool init_world(World& world, const zf3::UserGameFuncData& zf3Data) {
     zf3::zero_out(world);
 
-    // Reserve memory for enemy entities.
-    world.enemyEntsMemInfo = {
-        .entLimit = 64
-    };
-
-    world.enemyEntsMemInfo.entTypeMaxCnts[WANDERER_ENEMY] = 32;
-    world.enemyEntsMemInfo.entTypeMaxCnts[PSYCHO_ENEMY] = 32;
-
-    if (!gen_enemy_ents_mem(world.enemyEntsMem, world.enemyEntsMemInfo)) {
+    // Allocate world memory arena.
+    if (!world.memArena.init(gk_worldMemArenaSize)) {
         return false;
     }
 
-    spawn_enemy(world, PSYCHO_ENEMY, zf3Data.window.size / 2.0f);
-    spawn_enemy(world, WANDERER_ENEMY, zf3Data.window.size / 4.0f);
+    // Reserve memory for enemy entities.
+    world.enemyEntsMem.info = {
+        .entLimit = 64
+    };
+
+    world.enemyEntsMem.info.entTypeMaxCnts[WANDERER_ENEMY] = 32;
+    world.enemyEntsMem.info.entTypeMaxCnts[PSYCHO_ENEMY] = 32;
+
+    world.enemyEntsMem.ptrs = reserve_enemy_ents_mem(world.memArena, world.enemyEntsMem.info);
+
+    //
+    world.size = {4000, 4000};
+
+    spawn_enemy(world, PSYCHO_ENEMY, zf3::to_vec_2d(world.size) / 2.0f);
+    spawn_enemy(world, WANDERER_ENEMY, (zf3::to_vec_2d(world.size) / 2.0f) + zf3::Vec2D {64.0f, 0.0f});
 
     //
     zf3::reset_renderer(zf3Data.renderer, NUM_WORLD_RENDER_LAYERS, UI_WORLD_RENDER_LAYER, {0.59f, 0.79f, 0.93f});
@@ -275,7 +288,7 @@ bool init_world(World& world, const zf3::UserGameFuncData& zf3Data) {
     const auto musicSrcID = zf3::add_music_src(zf3Data.musicSrcManager, 0);
     zf3::play_music_src(zf3Data.musicSrcManager, musicSrcID, 0.35f);
 
-    spawn_player(world, zf3Data.window.size / 4.0f);
+    spawn_player(world, zf3::to_vec_2d(world.size) / 2.0f);
     zf3Data.renderer.cam.pos = world.player.pos;
 
     return true;
@@ -284,22 +297,22 @@ bool init_world(World& world, const zf3::UserGameFuncData& zf3Data) {
 bool world_tick(World& world, const zf3::UserGameFuncData& zf3Data) {
     if (world.player.active) {
         player_tick(world.player, world.hitboxes, zf3Data.inputManager, zf3Data.renderer.cam, zf3Data.window);
-        proc_player_enemy_collisions(world.player, world.enemyEntsMem, world.enemyEntsMemInfo, zf3Data.sndSrcManager);
+        proc_player_enemy_collisions(world.player, world.enemyEntsMem, world.enemyEntsMem.info, zf3Data.sndSrcManager);
     }
 
-    for (int i = 0; i < world.enemyEntsMemInfo.entLimit; ++i) {
-        if (!zf3::is_bit_active(world.enemyEntsMem.entActivity, i)) {
+    for (int i = 0; i < world.enemyEntsMem.info.entLimit; ++i) {
+        if (!zf3::is_bit_active(world.enemyEntsMem.ptrs.entActivity, i)) {
             continue;
         }
 
-        EnemyEnt& enemyEnt = world.enemyEntsMem.ents[i];
+        EnemyEnt& enemyEnt = world.enemyEntsMem.ptrs.ents[i];
         void* const enemyEntExt = get_enemy_ent_ext(i, world.enemyEntsMem);
         get_enemy_type_info(enemyEnt.type).tick(enemyEnt, enemyEntExt);
     }
 
-    proc_hitbox_collisions(world.hitboxes, world.player, world.enemyEntsMem, world.enemyEntsMemInfo, zf3Data.sndSrcManager);
+    proc_hitbox_collisions(world.hitboxes, world.player, world.enemyEntsMem, zf3Data.sndSrcManager);
 
-    camera_tick(zf3Data.renderer.cam, world.player, zf3Data.inputManager, zf3Data.window);
+    camera_tick(zf3Data.renderer.cam, world, zf3Data.inputManager, zf3Data.window);
 
     //
     // Writing Render Data
@@ -321,17 +334,17 @@ bool world_tick(World& world, const zf3::UserGameFuncData& zf3Data) {
 
         const zf3::Vec2D mouseCamPos = zf3::screen_to_camera_pos(zf3Data.inputManager.inputState.mousePos, zf3Data.renderer.cam, zf3Data.window);
         const float swordRot = zf3::calc_dir(world.player.pos, mouseCamPos) + world.player.swordRotOffs;
-        
+
         zf3::write_to_sprite_batch(zf3Data.renderer, ENTS_WORLD_RENDER_LAYER, swordSprite.texIndex, world.player.pos, swordSprite.srcRect, {-0.1f, 0.5f}, swordRot);
     }
 
     // Enemies
-    for (int i = 0; i < world.enemyEntsMemInfo.entLimit; ++i) {
-        if (!zf3::is_bit_active(world.enemyEntsMem.entActivity, i)) {
+    for (int i = 0; i < world.enemyEntsMem.info.entLimit; ++i) {
+        if (!zf3::is_bit_active(world.enemyEntsMem.ptrs.entActivity, i)) {
             continue;
         }
 
-        const EnemyEnt& ent = world.enemyEntsMem.ents[i];
+        const EnemyEnt& ent = world.enemyEntsMem.ptrs.ents[i];
         const EnemyTypeInfo& typeInfo = get_enemy_type_info(ent.type);
         const Sprite& sprite = get_sprite(typeInfo.spriteIndex);
         zf3::write_to_sprite_batch(zf3Data.renderer, ENTS_WORLD_RENDER_LAYER, sprite.texIndex, ent.pos, sprite.srcRect);
@@ -357,5 +370,5 @@ bool world_tick(World& world, const zf3::UserGameFuncData& zf3Data) {
 }
 
 void clean_world(World& world) {
-    world.enemyEntsMem.arena.clean();
+    world.memArena.clean();
 }
