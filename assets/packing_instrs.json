@@ -1,0 +1,33 @@
+{
+    "textures": [
+        "textures/pixels.png",
+        "textures/player.png",
+        "textures/enemies.png",
+        "textures/companions.png",
+        "textures/ui.png"
+    ],
+	"fonts": [
+		{
+			"relFilePath": "fonts/eb_garamond.ttf",
+			"ptSize": 18
+		},
+		{
+			"relFilePath": "fonts/eb_garamond.ttf",
+			"ptSize": 28
+		},
+		{
+			"relFilePath": "fonts/eb_garamond.ttf",
+			"ptSize": 36
+		},
+		{
+			"relFilePath": "fonts/eb_garamond.ttf",
+			"ptSize": 72
+		}
+	],
+	"sounds": [
+        "sounds/player_hurt.wav"
+    ],
+	"music": [
+        "music/wilderness.mp3"
+    ]
+}
