@@ -49,8 +49,8 @@ bool init_world(ZF4Scene* scene, ZF4GamePtrs* gamePtrs) {
     scene->renderer.cam.scale = CAM_SCALE;
     scene->renderer.bgColor = BG_COLOR;
 
-    world->player = zf4_spawn_ent(scene, PLAYER_ENT, zf4_calc_vec_2d_scaled(WORLD_SIZE, 0.5f), gamePtrs);
-    scene->renderer.cam.pos = zf4_get_ent(&scene->entManager, world->player)->pos;
+    world->player = zf4_spawn_ent(PLAYER_ENT, zf4_calc_vec_2d_scaled(WORLD_SIZE, 0.5f), scene, gamePtrs);
+    scene->renderer.cam.pos = zf4_get_ent(world->player, &scene->entManager)->pos;
 
     ZF4Vec2D camSize = zf4_get_camera_size(&scene->renderer.cam);
 
@@ -60,7 +60,7 @@ bool init_world(ZF4Scene* scene, ZF4GamePtrs* gamePtrs) {
             zf4_gen_rand_float(0.0f, WORLD_SIZE.y)
         };
 
-        zf4_spawn_ent(scene, ENEMY_ENT, enemyPos, gamePtrs);
+        zf4_spawn_ent(ENEMY_ENT, enemyPos, scene, gamePtrs);
     }
 
     return true;
@@ -74,7 +74,7 @@ bool world_tick(ZF4Scene* scene, int* sceneChangeIndex, ZF4GamePtrs* gamePtrs) {
     //
     {
         ZF4Camera* cam = &scene->renderer.cam;
-        ZF4Ent* playerEnt = zf4_get_ent(&scene->entManager, world->player);
+        ZF4Ent* playerEnt = zf4_get_ent(world->player, &scene->entManager);
 
         // Determine the target position.
         ZF4Vec2D mouseCamPos = zf4_screen_to_camera_pos(zf4_get_mouse_pos(), &scene->renderer.cam);
