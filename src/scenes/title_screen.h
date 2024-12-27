@@ -14,8 +14,8 @@ typedef struct {
     ZF4CharBatchID startTextCBID;
 } TitleScreen;
 
-void init_title_screen_render_layer_props(ZF4RenderLayerProps* const props, const int layerIndex);
-bool init_title_screen(ZF4Scene* const scene, const ZF4GamePtrs* const gamePtrs);
-bool title_screen_tick(ZF4Scene* const scene, int* const sceneChangeIndex, const ZF4GamePtrs* const gamePtrs);
+void init_title_screen_render_layer_props(ZF4RenderLayerProps* props, int layerIndex);
+bool init_title_screen(ZF4Scene* scene, ZF4GamePtrs* gamePtrs);
+bool title_screen_tick(ZF4Scene* scene, int* sceneChangeIndex, ZF4GamePtrs* gamePtrs);
 
 #endif

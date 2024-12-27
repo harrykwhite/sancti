@@ -33,16 +33,16 @@ typedef struct {
     ZF4Vec2D force;
 } HitboxEntExt;
 
-void load_ent_type(ZF4EntType* const type, const int typeIndex);
+void load_ent_type(ZF4EntType* type, int typeIndex);
 
-bool init_player_ent(ZF4Scene* const scene, const ZF4EntID entID, const ZF4GamePtrs* const gamePtrs);
-bool player_ent_tick(ZF4Scene* const scene, const ZF4EntID entID, const ZF4GamePtrs* const gamePtrs);
+bool init_player_ent(ZF4Scene* scene, ZF4EntID entID, ZF4GamePtrs* gamePtrs);
+bool player_ent_tick(ZF4Scene* scene, ZF4EntID entID, ZF4GamePtrs* gamePtrs);
 
-bool init_enemy_ent(ZF4Scene* const scene, const ZF4EntID entID, const ZF4GamePtrs* const gamePtrs);
-bool enemy_ent_tick(ZF4Scene* const scene, const ZF4EntID entID, const ZF4GamePtrs* const gamePtrs);
-void hurt_enemy_ent(ZF4EntManager* const entManager, const ZF4EntID entID, const int dmg, const ZF4Vec2D force);
+bool init_enemy_ent(ZF4Scene* scene, ZF4EntID entID, ZF4GamePtrs* gamePtrs);
+bool enemy_ent_tick(ZF4Scene* scene, ZF4EntID entID, ZF4GamePtrs* gamePtrs);
+void hurt_enemy_ent(ZF4EntManager* entManager, ZF4EntID entID, int dmg, ZF4Vec2D force);
 
-bool init_hitbox_ent(ZF4Scene* const scene, const ZF4EntID entID, const ZF4GamePtrs* const gamePtrs);
-bool hitbox_ent_tick(ZF4Scene* const scene, const ZF4EntID entID, const ZF4GamePtrs* const gamePtrs);
+bool init_hitbox_ent(ZF4Scene* scene, ZF4EntID entID, ZF4GamePtrs* gamePtrs);
+bool hitbox_ent_tick(ZF4Scene* scene, ZF4EntID entID, ZF4GamePtrs* gamePtrs);
 
 #endif

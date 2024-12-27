@@ -1,6 +1,8 @@
 #include "world.h"
 
 #include "../asset_indexes.h"
+#include "../sprites.h"
+#include "../ents/ent_types.h"
 
 #define WORLD_SIZE ((ZF4Vec2D) {2560, 1440})
 
@@ -11,7 +13,7 @@
 
 #define BG_COLOR ((ZF4Vec3D) {0.59f, 0.79f, 0.93f})
 
-void init_world_render_layer_props(ZF4RenderLayerProps* const props, const int layerIndex) {
+void init_world_render_layer_props(ZF4RenderLayerProps* props, int layerIndex) {
     switch (layerIndex) {
         case CAM_WORLD_RENDER_LAYER:
             props->spriteBatchCnt = 1;
@@ -25,7 +27,7 @@ void init_world_render_layer_props(ZF4RenderLayerProps* const props, const int l
     }
 }
 
-int load_world_screen_ent_type_ext_limit(const int typeIndex) {
+int load_world_screen_ent_type_ext_limit(int typeIndex) {
     switch (typeIndex) {
         case PLAYER_ENT:
             return 1;
@@ -41,8 +43,8 @@ int load_world_screen_ent_type_ext_limit(const int typeIndex) {
     }
 }
 
-bool init_world(ZF4Scene* const scene, const ZF4GamePtrs* const gamePtrs) {
-    World* const world = scene->userData;
+bool init_world(ZF4Scene* scene, ZF4GamePtrs* gamePtrs) {
+    World* world = scene->userData;
 
     scene->renderer.cam.scale = CAM_SCALE;
     scene->renderer.bgColor = BG_COLOR;
@@ -50,10 +52,10 @@ bool init_world(ZF4Scene* const scene, const ZF4GamePtrs* const gamePtrs) {
     world->player = zf4_spawn_ent(scene, PLAYER_ENT, zf4_calc_vec_2d_scaled(WORLD_SIZE, 0.5f), gamePtrs);
     scene->renderer.cam.pos = zf4_get_ent(&scene->entManager, world->player)->pos;
 
-    const ZF4Vec2D camSize = zf4_get_camera_size(&scene->renderer.cam);
+    ZF4Vec2D camSize = zf4_get_camera_size(&scene->renderer.cam);
 
     for (int i = 0; i < 10; ++i) {
-        const ZF4Vec2D enemyPos = (ZF4Vec2D) {
+        ZF4Vec2D enemyPos = (ZF4Vec2D) {
             zf4_gen_rand_float(0.0f, WORLD_SIZE.x),
             zf4_gen_rand_float(0.0f, WORLD_SIZE.y)
         };
@@ -64,33 +66,33 @@ bool init_world(ZF4Scene* const scene, const ZF4GamePtrs* const gamePtrs) {
     return true;
 }
 
-bool world_tick(ZF4Scene* const scene, int* const sceneChangeIndex, const ZF4GamePtrs* const gamePtrs) {
-    World* const world = scene->userData;
+bool world_tick(ZF4Scene* scene, int* sceneChangeIndex, ZF4GamePtrs* gamePtrs) {
+    World* world = scene->userData;
 
     //
     // Camera
     //
     {
-        ZF4Camera* const cam = &scene->renderer.cam;
-        const ZF4Ent* const playerEnt = zf4_get_ent(&scene->entManager, world->player);
+        ZF4Camera* cam = &scene->renderer.cam;
+        ZF4Ent* playerEnt = zf4_get_ent(&scene->entManager, world->player);
 
         // Determine the target position.
-        const ZF4Vec2D mouseCamPos = zf4_screen_to_camera_pos(zf4_get_mouse_pos(), &scene->renderer.cam);
-        const ZF4Vec2D playerToMouseCamPosDiff = zf4_calc_vec_2d_diff(mouseCamPos, playerEnt->pos);
-        const float playerToMouseCamPosDist = zf4_calc_vec_2d_mag(playerToMouseCamPosDiff);
-        const ZF4Vec2D playerToMouseCamPosDir = zf4_calc_vec_2d_normal(playerToMouseCamPosDiff);
+        ZF4Vec2D mouseCamPos = zf4_screen_to_camera_pos(zf4_get_mouse_pos(), &scene->renderer.cam);
+        ZF4Vec2D playerToMouseCamPosDiff = zf4_calc_vec_2d_diff(mouseCamPos, playerEnt->pos);
+        float playerToMouseCamPosDist = zf4_calc_vec_2d_mag(playerToMouseCamPosDiff);
+        ZF4Vec2D playerToMouseCamPosDir = zf4_calc_vec_2d_normal(playerToMouseCamPosDiff);
 
-        const float lookDist = CAM_LOOK_DIST_LIMIT * ZF4_MIN(playerToMouseCamPosDist / CAM_LOOK_DIST_SCALAR_DIST, 1.0f);
-        const ZF4Vec2D lookOffs = zf4_calc_vec_2d_scaled(playerToMouseCamPosDir, lookDist);
+        float lookDist = CAM_LOOK_DIST_LIMIT * ZF4_MIN(playerToMouseCamPosDist / CAM_LOOK_DIST_SCALAR_DIST, 1.0f);
+        ZF4Vec2D lookOffs = zf4_calc_vec_2d_scaled(playerToMouseCamPosDir, lookDist);
 
-        const ZF4Vec2D targPos = zf4_calc_vec_2d_sum(playerEnt->pos, lookOffs);
+        ZF4Vec2D targPos = zf4_calc_vec_2d_sum(playerEnt->pos, lookOffs);
 
         // Approach the target position.
         cam->pos.x = zf4_lerp(cam->pos.x, targPos.x, CAM_POS_LERP);
         cam->pos.y = zf4_lerp(cam->pos.y, targPos.y, CAM_POS_LERP);
 
         // Clamp the camera position within world boundaries.
-        const ZF4Vec2D camSize = zf4_get_camera_size(cam);
+        ZF4Vec2D camSize = zf4_get_camera_size(cam);
         cam->pos.x = ZF4_CLAMP(cam->pos.x, camSize.x / 2.0f, WORLD_SIZE.x - (camSize.x / 2.0f));
         cam->pos.y = ZF4_CLAMP(cam->pos.y, camSize.y / 2.0f, WORLD_SIZE.y - (camSize.y / 2.0f));
     }
@@ -99,7 +101,7 @@ bool world_tick(ZF4Scene* const scene, int* const sceneChangeIndex, const ZF4Gam
     // Cursor
     //
     {
-        const ZF4SpriteBatchWriteInfo sbWriteInfo = {
+        ZF4SpriteBatchWriteInfo sbWriteInfo = {
             .texIndex = zf4_get_sprite(CURSOR_SPRITE)->texIndex,
             .pos = zf4_get_mouse_pos(),
             .srcRect = zf4_get_sprite_src_rect(CURSOR_SPRITE, 0),

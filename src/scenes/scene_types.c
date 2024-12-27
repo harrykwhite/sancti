@@ -4,7 +4,7 @@
 #include "title_screen.h"
 #include "world.h"
 
-void load_scene_type_info(ZF4SceneTypeInfo* const typeInfo, const int typeIndex) {
+void load_scene_type_info(ZF4SceneTypeInfo* typeInfo, int typeIndex) {
     switch (typeIndex) {
         case TITLE_SCREEN_SCENE:
             typeInfo->memArenaSize = ZF4_MEGABYTES(1);

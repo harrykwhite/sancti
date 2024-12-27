@@ -4,7 +4,7 @@
 #include "scenes/scene_types.h"
 
 int main() {
-    const ZF4UserGameInfo userGameInfo = {
+    ZF4UserGameInfo userGameInfo = {
         .windowInitWidth = 1280,
         .windowInitHeight = 720,
         .windowTitle = "Sancti",

@@ -10,6 +10,6 @@ typedef enum {
     SCENE_TYPE_CNT
 } SceneType;
 
-void load_scene_type_info(ZF4SceneTypeInfo* const typeInfo, const int typeIndex);
+void load_scene_type_info(ZF4SceneTypeInfo* typeInfo, int typeIndex);
 
 #endif

@@ -3,7 +3,7 @@
 #include <stdalign.h>
 #include "../sprites.h"
 
-void load_ent_type(ZF4EntType* const type, const int typeIndex) {
+void load_ent_type(ZF4EntType* type, int typeIndex) {
     switch (typeIndex) {
         case PLAYER_ENT:
             type->extSize = sizeof(PlayerEntExt);

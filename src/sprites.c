@@ -2,7 +2,7 @@
 
 #include "asset_indexes.h"
 
-static void load_blue_pixel_sprite_src_rect(ZF4Rect* const srcRect, const int frameIndex) {
+static void load_blue_pixel_sprite_src_rect(ZF4Rect* srcRect, int frameIndex) {
     switch (frameIndex) {
         case 0:
             srcRect->x = 0;
@@ -13,7 +13,7 @@ static void load_blue_pixel_sprite_src_rect(ZF4Rect* const srcRect, const int fr
     }
 }
 
-static void load_player_sprite_src_rect(ZF4Rect* const srcRect, const int frameIndex) {
+static void load_player_sprite_src_rect(ZF4Rect* srcRect, int frameIndex) {
     switch (frameIndex) {
         case 0:
             srcRect->x = 0;
@@ -24,7 +24,7 @@ static void load_player_sprite_src_rect(ZF4Rect* const srcRect, const int frameI
     }
 }
 
-static void load_sword_sprite_src_rect(ZF4Rect* const srcRect, const int frameIndex) {
+static void load_sword_sprite_src_rect(ZF4Rect* srcRect, int frameIndex) {
     switch (frameIndex) {
         case 0:
             srcRect->x = 24;
@@ -35,7 +35,7 @@ static void load_sword_sprite_src_rect(ZF4Rect* const srcRect, const int frameIn
     }
 }
 
-static void load_enemy_sprite_src_rect(ZF4Rect* const srcRect, const int frameIndex) {
+static void load_enemy_sprite_src_rect(ZF4Rect* srcRect, int frameIndex) {
     switch (frameIndex) {
         case 0:
             srcRect->x = 0;
@@ -46,7 +46,7 @@ static void load_enemy_sprite_src_rect(ZF4Rect* const srcRect, const int frameIn
     }
 }
 
-static void load_companion_sprite_src_rect(ZF4Rect* const srcRect, const int frameIndex) {
+static void load_companion_sprite_src_rect(ZF4Rect* srcRect, int frameIndex) {
     switch (frameIndex) {
         case 0:
             srcRect->x = 0;
@@ -57,7 +57,7 @@ static void load_companion_sprite_src_rect(ZF4Rect* const srcRect, const int fra
     }
 }
 
-static void load_cursor_sprite_src_rect(ZF4Rect* const srcRect, const int frameIndex) {
+static void load_cursor_sprite_src_rect(ZF4Rect* srcRect, int frameIndex) {
     switch (frameIndex) {
         case 0:
             srcRect->x = 0;
@@ -68,7 +68,7 @@ static void load_cursor_sprite_src_rect(ZF4Rect* const srcRect, const int frameI
     }
 }
 
-void load_sprite(ZF4Sprite* const sprite, const int index) {
+void load_sprite(ZF4Sprite* sprite, int index) {
     switch (index) {
         case BLUE_PIXEL_SPRITE:
             *sprite = (ZF4Sprite) {

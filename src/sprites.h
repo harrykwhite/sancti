@@ -14,6 +14,6 @@ typedef enum {
     SPRITE_CNT
 } SpriteIndex;
 
-void load_sprite(ZF4Sprite* const sprite, const int index);
+void load_sprite(ZF4Sprite* sprite, int index);
 
 #endif
