@@ -2,7 +2,6 @@
 
 #include "../sprites.h"
 
-#define HP_LIMIT 100
 #define INV_TIME_MAX 30
 #define INV_ALPHA_MIN 0.5f
 #define INV_ALPHA_MAX 0.7f
@@ -39,7 +38,7 @@ bool init_player_ent(ZF4Scene* scene, ZF4EntID playerID, ZF4GamePtrs* gamePtrs) 
     PlayerEntExt* playerExt = zf4_get_ent_type_ext(playerID, &scene->entManager);
 
     player->spriteIndex = PLAYER_SPRITE;
-    playerExt->hp = HP_LIMIT;
+    playerExt->hp = PLAYER_HP_LIMIT;
 
     return true;
 }
@@ -62,18 +61,20 @@ bool player_ent_tick(ZF4Scene* scene, ZF4EntID playerID, ZF4GamePtrs* gamePtrs) 
     //
     // Movement
     //
-    ZF4Vec2D moveAxis = {
-        zf4_is_key_down(ZF4_KEY_D) - zf4_is_key_down(ZF4_KEY_A),
-        zf4_is_key_down(ZF4_KEY_S) - zf4_is_key_down(ZF4_KEY_W)
-    };
+    {
+        ZF4Vec2D moveAxis = {
+            zf4_is_key_down(ZF4_KEY_D) - zf4_is_key_down(ZF4_KEY_A),
+            zf4_is_key_down(ZF4_KEY_S) - zf4_is_key_down(ZF4_KEY_W)
+        };
 
-    ZF4Vec2D velTarg = zf4_calc_vec_2d_scaled(moveAxis, calc_move_spd(playerExt));
-    float velLerp = 0.25f;
+        ZF4Vec2D velTarg = zf4_calc_vec_2d_scaled(moveAxis, calc_move_spd(playerExt));
+        float velLerp = 0.25f;
 
-    playerExt->vel.x = zf4_lerp(playerExt->vel.x, velTarg.x, velLerp);
-    playerExt->vel.y = zf4_lerp(playerExt->vel.y, velTarg.y, velLerp);
+        playerExt->vel.x = zf4_lerp(playerExt->vel.x, velTarg.x, velLerp);
+        playerExt->vel.y = zf4_lerp(playerExt->vel.y, velTarg.y, velLerp);
 
-    player->pos = zf4_calc_vec_2d_sum(player->pos, playerExt->vel);
+        player->pos = zf4_calc_vec_2d_sum(player->pos, playerExt->vel);
+    }
 
     //
     // Enemy Collisions
@@ -120,29 +121,38 @@ bool player_ent_tick(ZF4Scene* scene, ZF4EntID playerID, ZF4GamePtrs* gamePtrs) 
         };
     }
 
-    float swordRotOffsTargAbs = SWORD_ROT_OFFS_MAX + (((float)playerExt->swordChargeTime / SWORD_CHARGE_TIME_MAX) * SWORD_CHARGE_ROT_OFFS);
-    float swordRotOffsTarg = ((playerExt->swordRotAxis ? 1 : -1) * swordRotOffsTargAbs);
-    playerExt->swordRotOffs = zf4_lerp(playerExt->swordRotOffs, swordRotOffsTarg, 0.4f);
+    //
+    // Sword Rotation
+    //
+    {
+        float swordRotOffsTargAbs = SWORD_ROT_OFFS_MAX + (((float)playerExt->swordChargeTime / SWORD_CHARGE_TIME_MAX) * SWORD_CHARGE_ROT_OFFS);
+        float swordRotOffsTarg = ((playerExt->swordRotAxis ? 1 : -1) * swordRotOffsTargAbs);
+        playerExt->swordRotOffs = zf4_lerp(playerExt->swordRotOffs, swordRotOffsTarg, 0.4f);
 
-    playerExt->swordRot = zf4_calc_vec_2d_dir_rads(player->pos, mouseCamPos) + playerExt->swordRotOffs;
+        playerExt->swordRot = zf4_calc_vec_2d_dir_rads(player->pos, mouseCamPos) + playerExt->swordRotOffs;
+    }
 
-    // PROBLEM: The render layer is scene-specific, but the entity is not! Perhaps this is a sign from the gods indicating that I should remove the layer system?
+    //
+    // Writing Render Data
+    //
     zf4_write_ent_render_data(player, &scene->renderer, 0, calc_alpha(playerExt));
 
-    ZF4Vec2D swordOffs = zf4_calc_len_dir_vec_2d(SWORD_OFFS_DIST, playerExt->swordRot);
-    ZF4Vec2D swordPos = zf4_calc_vec_2d_sum(player->pos, swordOffs);
+    {
+        ZF4Vec2D swordOffs = zf4_calc_len_dir_vec_2d(SWORD_OFFS_DIST, playerExt->swordRot);
+        ZF4Vec2D swordPos = zf4_calc_vec_2d_sum(player->pos, swordOffs);
 
-    ZF4SpriteBatchWriteInfo swordSBWriteInfo = {
-        .texIndex = zf4_get_sprite(SWORD_SPRITE)->texIndex,
-        .pos = swordPos,
-        .srcRect = zf4_get_sprite_src_rect(SWORD_SPRITE, 0),
-        .origin = SWORD_ORIGIN,
-        .rot = playerExt->swordRot,
-        .scale = {1.0f, 1.0f},
-        .alpha = 1.0f
-    };
+        ZF4SpriteBatchWriteInfo swordSBWriteInfo = {
+            .texIndex = zf4_get_sprite(SWORD_SPRITE)->texIndex,
+            .pos = swordPos,
+            .srcRect = zf4_get_sprite_src_rect(SWORD_SPRITE, 0),
+            .origin = SWORD_ORIGIN,
+            .rot = playerExt->swordRot,
+            .scale = {1.0f, 1.0f},
+            .alpha = 1.0f
+        };
 
-    zf4_write_to_sprite_batch(&scene->renderer, 0, &swordSBWriteInfo);
+        zf4_write_to_sprite_batch(&scene->renderer, 0, &swordSBWriteInfo);
+    }
 
     //
     // Invincibility

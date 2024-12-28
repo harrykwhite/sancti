@@ -13,6 +13,23 @@
 
 #define BG_COLOR ((ZF4Vec3D) {0.59f, 0.79f, 0.93f})
 
+#define HP_TEXT_LEN_LIMIT 11
+
+static void write_ent_hp_text_to_char_batch(ZF4CharBatchID cbID, ZF4Renderer* renderer, int hp, int hpLimit) {
+    char text[HP_TEXT_LEN_LIMIT + 1];
+    snprintf(text, sizeof(text), "%d/%d", hp, hpLimit);
+    zf4_write_to_char_batch(renderer, cbID, text, ZF4_FONT_HOR_ALIGN_CENTER, ZF4_FONT_VER_ALIGN_CENTER);
+}
+
+static ZF4Vec2D calc_ent_hp_text_pos(ZF4Ent* player) {
+    ZF4RectF playerCollider = zf4_get_ent_collider(player);
+
+    return (ZF4Vec2D) {
+        player->pos.x,
+        zf4_get_rect_f_bottom(&playerCollider) + 10.0f
+    };
+}
+
 void init_world_render_layer_props(ZF4RenderLayerProps* props, int layerIndex) {
     switch (layerIndex) {
         case CAM_WORLD_RENDER_LAYER:
@@ -49,8 +66,12 @@ bool init_world(ZF4Scene* scene, ZF4GamePtrs* gamePtrs) {
     scene->renderer.cam.scale = CAM_SCALE;
     scene->renderer.bgColor = BG_COLOR;
 
-    world->player = zf4_spawn_ent(PLAYER_ENT, zf4_calc_vec_2d_scaled(WORLD_SIZE, 0.5f), scene, gamePtrs);
-    scene->renderer.cam.pos = zf4_get_ent(world->player, &scene->entManager)->pos;
+    world->playerEntID = zf4_spawn_ent(PLAYER_ENT, zf4_calc_vec_2d_scaled(WORLD_SIZE, 0.5f), scene, gamePtrs);
+    scene->renderer.cam.pos = zf4_get_ent(world->playerEntID, &scene->entManager)->pos;
+
+    world->playerHPTextCBID = zf4_activate_any_char_batch(&scene->renderer, UI_WORLD_RENDER_LAYER, HP_TEXT_LEN_LIMIT, EB_GARAMOND_18_FONT);
+    PlayerEntExt* playerEntExt = zf4_get_ent_type_ext(world->playerEntID, &scene->entManager);
+    write_ent_hp_text_to_char_batch(world->playerHPTextCBID, &scene->renderer, playerEntExt->hp, PLAYER_HP_LIMIT);
 
     ZF4Vec2D camSize = zf4_get_camera_size(&scene->renderer.cam);
 
@@ -74,7 +95,7 @@ bool world_tick(ZF4Scene* scene, int* sceneChangeIndex, ZF4GamePtrs* gamePtrs) {
     //
     {
         ZF4Camera* cam = &scene->renderer.cam;
-        ZF4Ent* playerEnt = zf4_get_ent(world->player, &scene->entManager);
+        ZF4Ent* playerEnt = zf4_get_ent(world->playerEntID, &scene->entManager);
 
         // Determine the target position.
         ZF4Vec2D mouseCamPos = zf4_screen_to_camera_pos(zf4_get_mouse_pos(), &scene->renderer.cam);
@@ -96,6 +117,17 @@ bool world_tick(ZF4Scene* scene, int* sceneChangeIndex, ZF4GamePtrs* gamePtrs) {
         cam->pos.x = ZF4_CLAMP(cam->pos.x, camSize.x / 2.0f, WORLD_SIZE.x - (camSize.x / 2.0f));
         cam->pos.y = ZF4_CLAMP(cam->pos.y, camSize.y / 2.0f, WORLD_SIZE.y - (camSize.y / 2.0f));
     }
+
+    //
+    // Player HP
+    //
+    if (world->playerHPTextRewrite) {
+        PlayerEntExt* playerEntExt = zf4_get_ent_type_ext(world->playerEntID, &scene->entManager);
+        write_ent_hp_text_to_char_batch(world->playerHPTextCBID, &scene->renderer, playerEntExt->hp, PLAYER_HP_LIMIT);
+        world->playerHPTextRewrite = false;
+    }
+
+    zf4_get_char_batch_display_props(&scene->renderer, world->playerHPTextCBID)->pos = zf4_camera_to_screen_pos(calc_ent_hp_text_pos(zf4_get_ent(world->playerEntID, &scene->entManager)), &scene->renderer.cam);
 
     //
     // Cursor

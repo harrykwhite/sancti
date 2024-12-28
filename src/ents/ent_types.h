@@ -3,6 +3,8 @@
 
 #include <zf4.h>
 
+#define PLAYER_HP_LIMIT 100
+
 typedef enum {
     PLAYER_ENT,
     ENEMY_ENT,
