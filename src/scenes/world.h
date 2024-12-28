@@ -12,9 +12,8 @@ typedef enum {
 
 typedef struct {
     ZF4EntID playerEntID;
-
-    ZF4CharBatchID playerHPTextCBID;
-    bool playerHPTextRewrite;
+    int playerEntHPLast;
+    ZF4CharBatchID playerEntHPTextCBID;
 } World;
 
 void init_world_render_layer_props(ZF4RenderLayerProps* props, int layerIndex);

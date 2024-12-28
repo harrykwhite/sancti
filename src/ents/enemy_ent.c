@@ -8,7 +8,7 @@ bool init_enemy_ent(ZF4Scene* scene, ZF4EntID entID, ZF4GamePtrs* gamePtrs) {
 
     enemy->spriteIndex = ENEMY_SPRITE;
     enemyExt->hp = 25;
-    enemyExt->contactDmg = 1;
+    enemyExt->contactDmg = 10;
     enemyExt->contactStrength = 11.0f;
 
     return true;

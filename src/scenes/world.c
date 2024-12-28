@@ -21,13 +21,14 @@ static void write_ent_hp_text_to_char_batch(ZF4CharBatchID cbID, ZF4Renderer* re
     zf4_write_to_char_batch(renderer, cbID, text, ZF4_FONT_HOR_ALIGN_CENTER, ZF4_FONT_VER_ALIGN_CENTER);
 }
 
-static ZF4Vec2D calc_ent_hp_text_pos(ZF4Ent* player) {
+static ZF4Vec2D calc_ent_hp_text_pos(ZF4Ent* player, ZF4Camera* cam) {
     ZF4RectF playerCollider = zf4_get_ent_collider(player);
-
-    return (ZF4Vec2D) {
+    const ZF4Vec2D textCamPos = {
         player->pos.x,
         zf4_get_rect_f_bottom(&playerCollider) + 10.0f
     };
+
+    return zf4_camera_to_screen_pos(textCamPos, cam);
 }
 
 void init_world_render_layer_props(ZF4RenderLayerProps* props, int layerIndex) {
@@ -69,9 +70,9 @@ bool init_world(ZF4Scene* scene, ZF4GamePtrs* gamePtrs) {
     world->playerEntID = zf4_spawn_ent(PLAYER_ENT, zf4_calc_vec_2d_scaled(WORLD_SIZE, 0.5f), scene, gamePtrs);
     scene->renderer.cam.pos = zf4_get_ent(world->playerEntID, &scene->entManager)->pos;
 
-    world->playerHPTextCBID = zf4_activate_any_char_batch(&scene->renderer, UI_WORLD_RENDER_LAYER, HP_TEXT_LEN_LIMIT, EB_GARAMOND_18_FONT);
+    world->playerEntHPTextCBID = zf4_activate_any_char_batch(&scene->renderer, UI_WORLD_RENDER_LAYER, HP_TEXT_LEN_LIMIT, EB_GARAMOND_18_FONT);
     PlayerEntExt* playerEntExt = zf4_get_ent_type_ext(world->playerEntID, &scene->entManager);
-    write_ent_hp_text_to_char_batch(world->playerHPTextCBID, &scene->renderer, playerEntExt->hp, PLAYER_HP_LIMIT);
+    write_ent_hp_text_to_char_batch(world->playerEntHPTextCBID, &scene->renderer, playerEntExt->hp, PLAYER_HP_LIMIT);
 
     ZF4Vec2D camSize = zf4_get_camera_size(&scene->renderer.cam);
 
@@ -95,18 +96,23 @@ bool world_tick(ZF4Scene* scene, int* sceneChangeIndex, ZF4GamePtrs* gamePtrs) {
     //
     {
         ZF4Camera* cam = &scene->renderer.cam;
-        ZF4Ent* playerEnt = zf4_get_ent(world->playerEntID, &scene->entManager);
 
         // Determine the target position.
-        ZF4Vec2D mouseCamPos = zf4_screen_to_camera_pos(zf4_get_mouse_pos(), &scene->renderer.cam);
-        ZF4Vec2D playerToMouseCamPosDiff = zf4_calc_vec_2d_diff(mouseCamPos, playerEnt->pos);
-        float playerToMouseCamPosDist = zf4_calc_vec_2d_mag(playerToMouseCamPosDiff);
-        ZF4Vec2D playerToMouseCamPosDir = zf4_calc_vec_2d_normal(playerToMouseCamPosDiff);
+        ZF4Vec2D targPos = cam->pos;
 
-        float lookDist = CAM_LOOK_DIST_LIMIT * ZF4_MIN(playerToMouseCamPosDist / CAM_LOOK_DIST_SCALAR_DIST, 1.0f);
-        ZF4Vec2D lookOffs = zf4_calc_vec_2d_scaled(playerToMouseCamPosDir, lookDist);
+        if (zf4_does_ent_exist(world->playerEntID, &scene->entManager)) {
+            ZF4Ent* playerEnt = zf4_get_ent(world->playerEntID, &scene->entManager);
 
-        ZF4Vec2D targPos = zf4_calc_vec_2d_sum(playerEnt->pos, lookOffs);
+            ZF4Vec2D mouseCamPos = zf4_screen_to_camera_pos(zf4_get_mouse_pos(), &scene->renderer.cam);
+            ZF4Vec2D playerToMouseCamPosDiff = zf4_calc_vec_2d_diff(mouseCamPos, playerEnt->pos);
+            float playerToMouseCamPosDist = zf4_calc_vec_2d_mag(playerToMouseCamPosDiff);
+            ZF4Vec2D playerToMouseCamPosDir = zf4_calc_vec_2d_normal(playerToMouseCamPosDiff);
+
+            float lookDist = CAM_LOOK_DIST_LIMIT * ZF4_MIN(playerToMouseCamPosDist / CAM_LOOK_DIST_SCALAR_DIST, 1.0f);
+            ZF4Vec2D lookOffs = zf4_calc_vec_2d_scaled(playerToMouseCamPosDir, lookDist);
+
+            targPos = zf4_calc_vec_2d_sum(playerEnt->pos, lookOffs);
+        }
 
         // Approach the target position.
         cam->pos.x = zf4_lerp(cam->pos.x, targPos.x, CAM_POS_LERP);
@@ -119,15 +125,27 @@ bool world_tick(ZF4Scene* scene, int* sceneChangeIndex, ZF4GamePtrs* gamePtrs) {
     }
 
     //
-    // Player HP
+    // Player Entity HP Text
     //
-    if (world->playerHPTextRewrite) {
+    if (zf4_does_ent_exist(world->playerEntID, &scene->entManager)) {
+        ZF4Ent* playerEnt = zf4_get_ent(world->playerEntID, &scene->entManager);
         PlayerEntExt* playerEntExt = zf4_get_ent_type_ext(world->playerEntID, &scene->entManager);
-        write_ent_hp_text_to_char_batch(world->playerHPTextCBID, &scene->renderer, playerEntExt->hp, PLAYER_HP_LIMIT);
-        world->playerHPTextRewrite = false;
-    }
 
-    zf4_get_char_batch_display_props(&scene->renderer, world->playerHPTextCBID)->pos = zf4_camera_to_screen_pos(calc_ent_hp_text_pos(zf4_get_ent(world->playerEntID, &scene->entManager)), &scene->renderer.cam);
+        if (playerEntExt->hp != world->playerEntHPLast) {
+            write_ent_hp_text_to_char_batch(world->playerEntHPTextCBID, &scene->renderer, playerEntExt->hp, PLAYER_HP_LIMIT);
+        }
+
+        const ZF4Vec2D textPos = calc_ent_hp_text_pos(playerEnt, &scene->renderer.cam);
+        zf4_get_char_batch_display_props(&scene->renderer, world->playerEntHPTextCBID)->pos = textPos;
+
+        world->playerEntHPLast = playerEntExt->hp; // NOTE: Move down?
+    } else {
+        // NOTE: Might need to change how this is handled, as it's a bit hacky.
+        if (world->playerEntHPLast != 0) {
+            zf4_clear_char_batch(&scene->renderer, world->playerEntHPTextCBID);
+            world->playerEntHPLast = 0;
+        }
+    }
 
     //
     // Cursor
